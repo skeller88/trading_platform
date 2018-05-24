@@ -1,13 +1,13 @@
 import ccxt
 
-import utils.api_request_msgs as api_request_errors
-from constants import exchange_pairs
-from market_data.enums import exchange_names, exchange_ids
-from market_data.order import Order
-from market_data.pair import Pair
-from market_data.ticker import Ticker
+import utils.src.api_request_msgs as api_request_msgs
+from core.src.constants import exchange_pairs
+from exchanges.src.data.enums import exchange_names, exchange_ids
+from exchanges.src.data.order import Order
+from exchanges.src.data.pair import Pair
+from exchanges.src.data.ticker import Ticker
 from exchanges.src.exchange_service_abc import ExchangeServiceAbc
-from utils.http_utils import make_api_request
+from utils.src.http_utils import make_api_request
 
 GDAX_API_BASE_URL = 'https://api.gdax.com'
 # Markets
@@ -62,7 +62,7 @@ class GdaxLiveService(ExchangeServiceAbc):
         {'info': [{'Currency': 'BTC', 'Balance': 0.0, 'Available': 0.0, 'Pending': 0.0, 'CryptoAddress': '1FdGHn9b9dzwfEfxnjK4DJoy45DnqzaQcF'}, ...]}
         :return:
         """
-        data = make_api_request(api_request_errors.BALANCE_ERR.format(self.name()), self.client.fetch_balance)
+        data = make_api_request(api_request_msgs.BALANCE_ERR.format(self.name()), self.client.fetch_balance)
 
         if data is None:
             return
@@ -78,7 +78,7 @@ class GdaxLiveService(ExchangeServiceAbc):
     def fetch_closed_orders(self):
         self.client.load_markets()
         return make_api_request(
-            api_request_errors.OPEN_ORDERS_ERR.format(self.name()), self.client.fetch_closed_orders)
+            api_request_msgs.OPEN_ORDERS_ERR.format(self.name()), self.client.fetch_closed_orders)
 
     def fetch_market_symbols(self):
         # self.client.load_markets()
@@ -87,7 +87,7 @@ class GdaxLiveService(ExchangeServiceAbc):
 
     def fetch_open_orders(self, symbol=None):
         order_data_list = make_api_request(
-            api_request_errors.OPEN_ORDERS_ERR.format(exchange_names.poloniex), self.client.fetch_open_orders,
+            api_request_msgs.OPEN_ORDERS_ERR.format(exchange_names.poloniex), self.client.fetch_open_orders,
             symbol)
 
         return [Order(**order_data) for order_data in order_data_list] \
@@ -135,7 +135,7 @@ class GdaxLiveService(ExchangeServiceAbc):
 
     def fetch_ticker(self, market):
         ticker = make_api_request(
-            api_request_errors.TICKER_ERR.format(self.name()), self.client.fetch_ticker, market)
+            api_request_msgs.TICKER_ERR.format(self.name()), self.client.fetch_ticker, market)
 
         pair_name, ticker_instance = Ticker.from_exchange_data(ticker, self.id(), Ticker.current_version)
         if ticker_instance is None:

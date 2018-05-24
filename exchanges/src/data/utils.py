@@ -1,4 +1,4 @@
-from market_data.pair import Pair
+from exchanges.src.data.pair import Pair
 
 
 def check_required_fields(instance):

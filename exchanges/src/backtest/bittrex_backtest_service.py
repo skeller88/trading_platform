@@ -1,7 +1,7 @@
 from exchanges.src.backtest.backtest_service import BacktestService
-from market_data.enums import exchange_names, exchange_ids
-from market_data.financial_data import FinancialData
-from services.withdrawal_fees_service import WithdrawalFeesService
+from exchanges.src.data.enums import exchange_names, exchange_ids
+from exchanges.src.data.financial_data import FinancialData
+from exchanges.src.withdrawal_fees_service import WithdrawalFeesService
 
 
 class BittrexBacktestService:

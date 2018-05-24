@@ -4,7 +4,7 @@ while stub exchange operations such as buying, selling, and fetching balances. T
 """
 from exchanges.src.backtest.binance_backtest_service import BinanceBacktestService
 from exchanges.src.backtest.bittrex_backtest_service import BittrexBacktestService
-from market_data.enums import exchange_ids
+from exchanges.src.data.enums import exchange_ids
 
 
 def instantiate():

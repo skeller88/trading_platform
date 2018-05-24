@@ -1,7 +1,7 @@
-from market_data import standardizers
-from market_data.enums import exchange_ids
-from market_data.pair import Pair
-from utils.datetime_operations import utc_timestamp
+from exchanges.src.data import standardizers
+from exchanges.src.data.enums import exchange_ids
+from exchanges.src.data.pair import Pair
+from utils.src.datetime_operations import utc_timestamp
 
 
 class Ticker:

@@ -7,8 +7,8 @@ from exchanges.src.live.bittrex_live_service import BittrexLiveService
 from exchanges.src.live.gdax_live_service import GdaxLiveService
 from exchanges.src.live.kraken_live_service import KrakenLiveService
 from exchanges.src.live.poloniex_live_service import PoloniexLiveService
-from services.withdrawal_fees_service import WithdrawalFeesService
-from utils.parameter_store import get_parameter
+from exchanges.src.withdrawal_fees_service import WithdrawalFeesService
+from utils.src.parameter_store import get_parameter
 
 exchange_credentials_param = 'exchange_credentials'
 test_exchange_credentials_param = 'test_exchange_credentials'

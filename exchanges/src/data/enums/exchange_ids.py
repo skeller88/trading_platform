@@ -1,4 +1,4 @@
-from market_data.enums import exchange_names
+from exchanges.src.data.enums import exchange_names
 
 binance = 0
 bittrex = 1

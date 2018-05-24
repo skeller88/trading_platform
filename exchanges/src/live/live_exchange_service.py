@@ -1,21 +1,21 @@
 import ccxt
 
-from constants import exchange_pairs
-from market_data import standardizers
-from market_data.balance import Balance
-from market_data.deposit_destination import DepositDestination
-from market_data.enums import exchange_ids
-from market_data.enums.order_side import OrderSide
-from market_data.enums.order_status import OrderStatus
-from market_data.financial_data import FinancialData, zero, one
-from market_data.order import Order
-from market_data.ticker import Ticker
+from core.src.constants import exchange_pairs
+from exchanges.src.data import standardizers
+from exchanges.src.data .balance import Balance
+from exchanges.src.data .deposit_destination import DepositDestination
+from exchanges.src.data .enums import exchange_ids
+from exchanges.src.data .enums.order_side import OrderSide
+from exchanges.src.data .enums.order_status import OrderStatus
+from exchanges.src.data .financial_data import FinancialData, zero, one
+from exchanges.src.data .order import Order
+from exchanges.src.data .ticker import Ticker
 from exchanges.src.exchange_service_abc import ExchangeServiceAbc
-from utils import api_request_msgs
-from utils.api_request_msgs import LIMIT_BUY_ORDER_ATTEMPT, LIMIT_SELL_ORDER_ATTEMPT, LIMIT_BUY_ORDER_ERR, \
+from utils.src import api_request_msgs
+from utils.src.api_request_msgs import LIMIT_BUY_ORDER_ATTEMPT, LIMIT_SELL_ORDER_ATTEMPT, LIMIT_BUY_ORDER_ERR, \
     LIMIT_SELL_ORDER_ERR
-from utils.datetime_operations import utc_timestamp
-from utils.http_utils import make_api_request, make_api_limit_order_request
+from utils.src.datetime_operations import utc_timestamp
+from utils.src.http_utils import make_api_request, make_api_limit_order_request
 
 
 class LiveExchangeService(ExchangeServiceAbc):

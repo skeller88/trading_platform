@@ -1,12 +1,12 @@
 from copy import deepcopy
 
-from market_data.enums import exchange_ids
-from market_data.enums.order_side import OrderSide
-from market_data.enums.order_status import OrderStatus
-from market_data.enums.order_type import OrderType
-from market_data.financial_data import FinancialData, zero
-from market_data.pair import Pair
-from utils.datetime_operations import utc_timestamp, microsecond_timestamp_to_second_timestamp
+from exchanges.src.data.enums import exchange_ids
+from exchanges.src.data.enums.order_side import OrderSide
+from exchanges.src.data.enums.order_status import OrderStatus
+from exchanges.src.data.enums.order_type import OrderType
+from exchanges.src.data.financial_data import FinancialData, zero
+from exchanges.src.data.pair import Pair
+from utils.src.datetime_operations import utc_timestamp, microsecond_timestamp_to_second_timestamp
 
 STRFTIME_MICROSECONDS = '%Y-%m-%dT%H:%M:%SZ'
 

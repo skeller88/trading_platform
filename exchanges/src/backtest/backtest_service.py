@@ -22,18 +22,18 @@ from heapq import heappush, heappop
 
 from decimal import Decimal
 
-from market_data.deposit_destination import DepositDestination
-from market_data.enums import exchange_ids
-from market_data.enums.order_side import OrderSide
-from market_data.enums.order_status import OrderStatus
-from market_data.enums.order_type import OrderType
-from market_data.financial_data import FinancialData, zero, one
-from market_data.order import Order
-from market_data.pair import Pair
+from exchanges.src.data.deposit_destination import DepositDestination
+from exchanges.src.data.enums import exchange_ids
+from exchanges.src.data.enums.order_side import OrderSide
+from exchanges.src.data.enums.order_status import OrderStatus
+from exchanges.src.data.enums.order_type import OrderType
+from exchanges.src.data.financial_data import FinancialData, zero, one
+from exchanges.src.data.order import Order
+from exchanges.src.data.pair import Pair
 from exchanges.src.exchange_service_abc import ExchangeServiceAbc
-from utils.datetime_operations import utc_timestamp
-from utils.exceptions import InsufficientFundsException
-from utils.logging import print_if_debug_enabled
+from utils.src.datetime_operations import utc_timestamp
+from utils.src.exceptions import InsufficientFundsException
+from utils.src.logging import print_if_debug_enabled
 
 insufficient_funds = "Insufficient Funds"
 

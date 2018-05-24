@@ -2,7 +2,7 @@
 Have to do a few conversions of pair names to a common format, so that arbitrage opportunities can be explored.
 """
 
-from market_data.financial_data import FinancialData
+from exchanges.src.data.financial_data import FinancialData
 
 
 def bid_or_ask(value):
