@@ -1,0 +1,15 @@
+awscli
+beautifulsoup4
+boto3
+ccxt
+nose
+numpy
+pandas
+pytest
+pg8000
+python-binance
+pytz
+s3fs
+smart_open
+SQLAlchemy
+requests
