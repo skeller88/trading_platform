@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="trading_platform",
+    name="tradingplatform",
     version="0.0.1",
     author="skeller88",
     author_email="skeller88@gmail.com",

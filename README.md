@@ -165,6 +165,10 @@ parameter that is a dictionary consisting of the credentials for exchange.
     <exchange2_name>: {"key": "<exchange2_key>", "secret": "<exchange2_secret>"}
 }
 
+# Distribution
+
+`python setup.py bdist_wheel --dist-dir=trading_platform_dist`
+
 # Set up remote IDE
 https://medium.com/@erikhallstrm/work-remotely-with-pycharm-tensorflow-and-ssh-c60564be862d
  
