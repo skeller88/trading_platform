@@ -26,6 +26,108 @@ percent_balance_to_trade = FinancialData(90)
 minimum_eth_balance = FinancialData(.1)
 minimum_usdt_balance = FinancialData(50)
 
+# Calculate taxes assuming profits of around $400K in a year
+# CA doesn't provide exemptions for long term capital gains:
+# https://www.nerdwallet.com/ask/question/what-are-ca-state-tax-implications-on-long-term-capital-gains-27615
+# https://www.tax-brackets.org/californiataxtable
+# It would be tedious to add up all the marginal tax rates, so use a slightly lower % than would be used otherwise
+ca_tax = FinancialData(.08)
+federal_ltcg_tax = FinancialData(.15)
+# https://www.fool.com/taxes/2018/01/05/what-are-the-new-and-improved-2018-tax-brackets.aspx
+federal_income_tax = FinancialData(.35)
+
+eth_withdrawal_fee = FinancialData(.008)
+eth_price_usd = FinancialData(850)
+
+class Defaults:
+    ltcg_tax = federal_ltcg_tax + ca_tax
+    income_tax = federal_income_tax + ca_tax
+
+    # Average of Binance and Bittrex trade fees: binance - .001, bittrex - .0025
+    trade_fee = FinancialData(0.002)
+    arb_spread = FinancialData(.01)
+
+    # defaults based on DASH_ETH market data
+    # ETH as base, withdrawal fee on binance is .01, on bittrex is .006, so assuming that withdrawals will occur from both
+    # exchanges, take the average withdrawal fee.
+    initial_ticker = FinancialData(.5)
+    usdt_withdrawal_fee = FinancialData(9)
+    base_withdrawal_fee = eth_withdrawal_fee
+    base_withdrawal_fee_in_quote = base_withdrawal_fee / initial_ticker
+    quote_withdrawal_fee = FinancialData(.002)
+    initial_base_capital = FinancialData(20)
+    initial_quote_capital = FinancialData(40)
+
+# tickers in USD
+tickers_to_usd = {
+    'BTC': FinancialData(8000),
+    'ETH': FinancialData(600),
+    'USDT': one,
+    'USD': one
+}
+
+markets = {
+    # Profitable
+    'POWR_ETH': {
+        'base_withdrawal_fee': eth_withdrawal_fee,
+        'quote_withdrawal_fee': 5,
+        'initial_ticker': 0.00068001,
+        'num_arbs_per_year': 880,
+        'median_spread': 0.008
+    },
+    'QTUM_ETH': {
+        'base_withdrawal_fee': eth_withdrawal_fee,
+        'quote_withdrawal_fee': .01,
+        'initial_ticker': 0.02910537,
+        'num_arbs_per_year': 772,
+        'median_spread': 0.0056
+    },
+    'LTC_ETH': {
+        'base_withdrawal_fee': eth_withdrawal_fee,
+        'quote_withdrawal_fee': .01,
+        'initial_ticker': 0.26176,
+        'num_arbs_per_year': 730,
+        'median_spread': 0.0153
+    },
+    'ETC_ETH': {
+        'base_withdrawal_fee': eth_withdrawal_fee,
+        'quote_withdrawal_fee': .01,
+        'initial_ticker': 0.00045985,
+        'num_arbs_per_year': 472,
+        'median_spread': 0.0064
+    },
+    'XLM_ETH': {
+        'base_withdrawal_fee': eth_withdrawal_fee,
+        'quote_withdrawal_fee': .01,
+        'initial_ticker': 0.00045985,
+        'num_arbs_per_year': 365,
+        'median_spread': 0.0074
+    },
+    # Probably not
+    'DASH_ETH': {
+        'base_withdrawal_fee': eth_withdrawal_fee,
+        'quote_withdrawal_fee': .002,
+        'initial_ticker': 0.68583957,
+        'num_arbs_per_year': 40,
+        'median_spread': 0.005
+    },
+    'XMR_ETH': {
+        'base_withdrawal_fee': eth_withdrawal_fee,
+        'quote_withdrawal_fee': .04,
+        'initial_ticker': 0.27164833,
+        'num_arbs_per_year': 42,
+        'median_spread': 0.0133
+    },
+    'ZEC_ETH': {
+        'base_withdrawal_fee': eth_withdrawal_fee,
+        'quote_withdrawal_fee': .005,
+        'initial_ticker': 0.46480849,
+        'num_arbs_per_year': 42,
+        'median_spread': 0.0058
+    }
+}
+
+
 
 def quote_buy_and_sell_prices(exchange_service, pair):
     """
