@@ -4,10 +4,10 @@ from collections import defaultdict
 
 from nose.tools import assert_greater, eq_
 
-from trading_platform.exchanges.src.data.ticker import Ticker
-from trading_platform.exchanges.src.data.utils import check_required_fields
-from trading_platform.exchanges.src.live import live_subclasses
-from trading_platform.exchanges.src.ticker_service import TickerService
+from trading_platform.exchanges.data.ticker import Ticker
+from trading_platform.exchanges.data.utils import check_required_fields
+from trading_platform.exchanges.live import live_subclasses
+from trading_platform.exchanges.ticker_service import TickerService
 
 
 class TestTickerService(unittest.TestCase):

@@ -1,36 +1,37 @@
 """
-nosetests test.storage.test_balance_dao --nocapture
+nosetests test.storage.test_order_dao --nocapture
 """
 import unittest
-from copy import deepcopy
+from copy import deepcopy, copy
 
+import math
 import sqlalchemy
-from nose.tools import assert_true, eq_, assert_raises
+from nose.tools import assert_true, eq_, assert_raises, assert_greater
 
-from trading_platform.exchanges.data.balance import Balance
-from trading_platform.exchanges.data.enums import exchange_ids
-from trading_platform.storage.daos.balance_dao import BalanceDao
-from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
-from trading_platform.utils.datetime_operations import utc_timestamp
 from trading_platform.core.test import data
+from trading_platform.exchanges.data.order import Order
+from trading_platform.storage.daos.open_order_dao import OpenOrderDao
+from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
 
 SECONDS_PER_MIN = 60
-SECONDS_PER_DAY = SECONDS_PER_MIN*60*24
+SECONDS_PER_DAY = SECONDS_PER_MIN * 60 * 24
 TICKER_VERSION = 0
 
 
-class TestBalanceDao(unittest.TestCase):
+class TestOpenOrderDao(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.engine = SqlAlchemyEngine.local_engine_maker()
         cls.engine.initialize_tables()
         cls.session = cls.engine.scoped_session_maker()
-        cls.dao = BalanceDao()
-        cls.popo_class = Balance
+        cls.dao = OpenOrderDao()
+        cls.popo_class = Order
 
     def setUp(self):
-        self.dto1 = data.balance(exchange_ids.binance)
-        self.dto2 = data.balance(exchange_ids.bittrex)
+        self.dto1 = data.order(exchange_ids.binance, numerical_fields=False)
+        self.dto2 = data.order(exchange_ids.bittrex, processing_time=self.dto1.processing_time + 5000.,
+                               numerical_fields=False)
 
     def tearDown(self):
         self.dao.delete_all(session=self.session)
@@ -81,18 +82,32 @@ class TestBalanceDao(unittest.TestCase):
         session, fetched = self.dao.fetch_by_db_id(self.session, int(utc_timestamp()))
         eq_(fetched, None)
 
-    def test_fetch_all(self):
-        session, fetched = self.dao.fetch_all(self.session)
-        eq_(len(fetched), 0)
-        session, created = self.dao.bulk_save(session=self.session, commit=True,
-                                                     popos=[self.dto1, self.dto2])
-        session, fetched = self.dao.fetch_all(self.session)
-        eq_(len(fetched), 2)
+    def test_filter_processing_time_greater_than(self):
+        self.dao.bulk_save(session=self.session, commit=True, popos=[self.dto1, self.dto2])
+        result = self.dao.filter_processing_time_greater_than(session=self.session, processing_time=math.inf)
+        eq_(len(result), 0)
+
+        # Assumes dto2.processing_time > dto1.processing_time
+        result = self.dao.filter_processing_time_greater_than(session=self.session,
+                                                              processing_time=self.dto1.processing_time)
+        eq_(len(result), 2)
+
+        # Assert ordered by processing_time in ascending order
+        first = result[0]
+        self.dto1.db_id = first.db_id
+        self.dto1.created_at = first.created_at
+        eq_(first, self.dto1)
+
+        second = result[1]
+        self.dto2.db_id = second.db_id
+        self.dto2.created_at = second.created_at
+        eq_(second, self.dto2)
+        assert_greater(second.processing_time, first.processing_time)
 
     # Delete
     def test_delete(self):
         session, created = self.dao.bulk_save(session=self.session, commit=True,
-                                                     popos=[self.dto1, self.dto2])
+                                              popos=[self.dto1, self.dto2])
         eq_(len(created), 2)
         to_delete_db_id = created[0].db_id
         session, deleted = self.dao.delete(session=self.session, db_id=to_delete_db_id, commit=True)
@@ -100,9 +115,27 @@ class TestBalanceDao(unittest.TestCase):
         session, deleted = self.dao.fetch_by_db_id(self.session, to_delete_db_id)
         eq_(deleted, None)
 
+    def test_bulk_delete_by_order_index(self):
+        dto3 = copy(self.dto1)
+        self.dao.bulk_save(session=self.session, commit=True,
+                           popos=[self.dto1, self.dto2, dto3])
+        self.dao.bulk_delete_by_order_index(session=self.session, commit=True, popos=[self.dto1])
+
+        # dto1 and dto3 have the same order_index, so they both should be deleted
+        session, fetched = self.dao.fetch_all(self.session)
+        eq_(len(fetched), 1)
+
+        self.dao.save(session=self.session, commit=True, popo=self.dto1)
+        self.dao.bulk_delete_by_order_index(session=self.session, commit=True,
+                                            popos=[self.dto1, self.dto2])
+
+        # all dtos should be deleted
+        session, fetched = self.dao.fetch_all(self.session)
+        eq_(len(fetched), 0)
+
     def test_delete_all(self):
         session, created = self.dao.bulk_save(session=self.session, commit=True,
-                                                     popos=[self.dto1, self.dto2])
+                                              popos=[self.dto1, self.dto2])
         eq_(len(created), 2)
         session, deleted = self.dao.delete_all(session=self.session, commit=True)
         eq_(deleted, 2)

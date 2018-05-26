@@ -9,11 +9,11 @@ import sqlalchemy
 from nose.tools import assert_true, eq_, assert_raises, assert_greater
 
 from trading_platform.core.test.util_methods import eq_ignore_certain_fields
-from trading_platform.exchanges.src.data.enums import exchange_ids
-from trading_platform.exchanges.src.data.order import Order
-from trading_platform.storage.src.daos.order_dao import OrderDao
-from trading_platform.storage.src.sql_alchemy_engine import SqlAlchemyEngine
-from trading_platform.utils.src.datetime_operations import utc_timestamp
+from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.exchanges.data.order import Order
+from trading_platform.storage.daos.order_dao import OrderDao
+from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
+from trading_platform.utils.datetime_operations import utc_timestamp
 from trading_platform.core.test import data
 
 SECONDS_PER_MIN = 60

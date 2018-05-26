@@ -6,11 +6,11 @@ import unittest
 import sqlalchemy
 from nose.tools import assert_true, eq_, raises
 
-from trading_platform.exchanges.src.data.pair import Pair
-from trading_platform.exchanges.src.data.ticker import Ticker
-from trading_platform.storage.src.daos.ticker_dao import TickerDao
-from trading_platform.storage.src.sql_alchemy_engine import SqlAlchemyEngine
-from trading_platform.utils.src.datetime_operations import utc_timestamp
+from trading_platform.exchanges.data.pair import Pair
+from trading_platform.exchanges.data.ticker import Ticker
+from trading_platform.storage.daos.ticker_dao import TickerDao
+from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
+from trading_platform.utils.datetime_operations import utc_timestamp
 from trading_platform.core.test import data
 
 SECONDS_PER_MIN = 60

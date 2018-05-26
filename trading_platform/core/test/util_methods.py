@@ -2,7 +2,7 @@ import logging
 
 from nose.tools import eq_, assert_almost_equal
 
-from trading_platform.exchanges.src.data.financial_data import FinancialData
+from trading_platform.exchanges.data.financial_data import FinancialData
 
 
 def eq_ignore_certain_fields(a, b, fields_to_ignore):

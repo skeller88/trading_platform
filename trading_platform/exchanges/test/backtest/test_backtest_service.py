@@ -9,11 +9,11 @@ import pandas
 from nose.tools import eq_
 
 from trading_platform.core.test.data import Defaults, eth_withdrawal_fee
-from trading_platform.exchanges.src.backtest.backtest_service import BacktestService
-from trading_platform.exchanges.src.data.enums import exchange_ids
-from trading_platform.exchanges.src.data.financial_data import one, two, FinancialData, zero
-from trading_platform.exchanges.src.data.pair import Pair
-from trading_platform.utils.src.exceptions import InsufficientFundsException
+from trading_platform.exchanges.backtest.backtest_service import BacktestService
+from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.exchanges.data.financial_data import one, two, FinancialData, zero
+from trading_platform.exchanges.data.pair import Pair
+from trading_platform.utils.exceptions import InsufficientFundsException
 
 
 class TestBacktestService(unittest.TestCase):

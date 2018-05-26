@@ -4,17 +4,17 @@ Generates test data for testing purposes.
 from copy import copy
 from decimal import Decimal
 
-from trading_platform.exchanges.src.data.balance import Balance
-from trading_platform.exchanges.src.data.enums import exchange_ids
-from trading_platform.exchanges.src.data.enums.order_side import OrderSide
-from trading_platform.exchanges.src.data.enums.order_status import OrderStatus
-from trading_platform.exchanges.src.data.enums.order_type import OrderType
-from trading_platform.exchanges.src.data.financial_data import FinancialData, one
-from trading_platform.exchanges.src.data.order import Order
-from trading_platform.exchanges.src.data.pair import Pair
-from trading_platform.exchanges.src.data.ticker import Ticker
-from trading_platform.utils.src import datetime_operations
-from trading_platform.utils.src.datetime_operations import utc_timestamp, seconds_per_hour
+from trading_platform.exchanges.data.balance import Balance
+from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.exchanges.data.enums.order_side import OrderSide
+from trading_platform.exchanges.data.enums.order_status import OrderStatus
+from trading_platform.exchanges.data.enums.order_type import OrderType
+from trading_platform.exchanges.data.financial_data import FinancialData, one
+from trading_platform.exchanges.data.order import Order
+from trading_platform.exchanges.data.pair import Pair
+from trading_platform.exchanges.data.ticker import Ticker
+from trading_platform.utils import datetime_operations
+from trading_platform.utils.datetime_operations import utc_timestamp, seconds_per_hour
 
 decimal_num = Decimal(10)
 pair = Pair(base='USDT', quote='ETH')
