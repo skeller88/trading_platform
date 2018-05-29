@@ -2,14 +2,14 @@ import ccxt
 
 from trading_platform.core.constants import exchange_pairs
 from trading_platform.exchanges.data import standardizers
-from trading_platform.exchanges.data .balance import Balance
-from trading_platform.exchanges.data .deposit_destination import DepositDestination
-from trading_platform.exchanges.data .enums import exchange_ids
-from trading_platform.exchanges.data .enums.order_side import OrderSide
-from trading_platform.exchanges.data .enums.order_status import OrderStatus
-from trading_platform.exchanges.data .financial_data import FinancialData, zero, one
-from trading_platform.exchanges.data .order import Order
-from trading_platform.exchanges.data .ticker import Ticker
+from trading_platform.exchanges.data.balance import Balance
+from trading_platform.exchanges.data.deposit_destination import DepositDestination
+from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.exchanges.data.enums.order_side import OrderSide
+from trading_platform.exchanges.data.enums.order_status import OrderStatus
+from trading_platform.exchanges.data.financial_data import FinancialData, zero, one
+from trading_platform.exchanges.data.order import Order
+from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
 from trading_platform.utils import api_request_msgs
 from trading_platform.utils.api_request_msgs import LIMIT_BUY_ORDER_ATTEMPT, LIMIT_SELL_ORDER_ATTEMPT, LIMIT_BUY_ORDER_ERR, \

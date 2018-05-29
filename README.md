@@ -10,10 +10,8 @@ source venv/bin/activate
 curl https://bootstrap.pypa.io/get-pip.py | python
 deactivate
 source venv/bin/activate
+pip install -r requirements.txt
 ```
-
-Install dependencies
-`pip install -r requirements.txt`
 
 ## Set up Python environment for ipython notebooks
 Due to ipython requiring different dependencies from the app, a separate environment is configured via an environment.yml
