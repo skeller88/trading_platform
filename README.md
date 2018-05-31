@@ -165,7 +165,10 @@ parameter that is a dictionary consisting of the credentials for exchange.
 
 # Distribution
 
-`python setup.py bdist_wheel --dist-dir=trading_platform_dist`
+```bash
+# bump "version" field in setup.py
+./operations/package_wheel.sh
+```
 
 # Set up remote IDE
 https://medium.com/@erikhallstrm/work-remotely-with-pycharm-tensorflow-and-ssh-c60564be862d
