@@ -8,8 +8,11 @@ Ideally, it would, but as an initial effort, the service will subtract the strat
 from collections import defaultdict
 from decimal import Decimal
 
+import pandas
+
 from trading_platform.core.test.data import Defaults
 from trading_platform.exchanges.data.financial_data import zero, one, one_hundred
+from trading_platform.exchanges.data.pair import Pair
 
 
 class ProfitService:
@@ -43,9 +46,10 @@ class ProfitService:
         self.balance_dao = kwargs.get('balance_dao')
         self.ticker_service = kwargs.get('ticker_service')
         self.start_balance_usd_value = kwargs.get('start_balance_usd_value')
-        self.initial_btc_ticker = kwargs.get('initial_btc_ticker')
+        self.initial_tickers = kwargs.get('initial_tickers')
         self.balances = {}
         self.tickers = {}
+        self.profit_history = []
 
     def fetch_balances_by_currency(self, exchange_services):
         # TODO - figure out how to make this class FinancialData instead of Decimal
@@ -54,27 +58,19 @@ class ProfitService:
             balances_for_exchange = exchange_service.fetch_balances()
             for currency_name, balance in balances_for_exchange.items():
                 balance = balances_for_exchange.get(currency_name)
-                balance_value = balance.free if balance is not None else zero
+                balance_value = balance.total if balance is not None else zero
                 balances[currency_name] += balance_value
 
         self.balances = balances
         return self.balances
 
-    def fetch_tickers_by_quote_and_base(self, exchange_services):
-        tickers_list = self.ticker_service.fetch_latest_tickers(exchange_services)
-        self.tickers = {}
-        for ticker in tickers_list:
-            self.tickers[(ticker.quote, ticker.base)] = ticker
-        return self.tickers
-
-    def exchange_balances_usd_value(self, exchange_services):
+    def exchange_balances_usd_value(self, exchange_services, tickers_by_pair_name):
         balances = self.fetch_balances_by_currency(exchange_services)
-        tickers = self.fetch_tickers_by_quote_and_base(exchange_services)
 
         usd_value = zero
 
         for currency_name, amount in balances.items():
-            usd_ticker = self.usd_value_for_currency(currency_name, tickers)
+            usd_ticker = self.usd_value_for_currency(currency_name, tickers_by_pair_name)
             usd_value += amount * usd_ticker
 
         return usd_value
@@ -84,30 +80,38 @@ class ProfitService:
             return one
 
         for base in self.possible_bases:
-            ticker = tickers.get((currency, base))
+            ticker = tickers.get(Pair.name_for_base_and_quote(quote=currency, base=base))
             if ticker:
                 if base == self.usdt_str:
                     return ticker.bid
                 else:
-                    base_ticker_in_usd = tickers.get((base, self.usdt_str))
+                    base_ticker_in_usd = tickers.get(Pair.name_for_base_and_quote(quote=base, base=self.usdt_str))
                     return ticker.bid * base_ticker_in_usd.bid
 
-    def profit_summary(self, exchange_services, btc_ticker):
-        end_balance_usd_value = self.exchange_balances_usd_value(exchange_services)
+    def profit_summary(self, exchange_services, end_tickers):
+        """
+        Profit summary for strategy and buy and hold BTC.
+        :param exchange_services:
+        :param end_tickers: Assumes that tickers are pretty much the same across all exchanges.
+        :return:
+        """
+        end_balance_usd_value = self.exchange_balances_usd_value(exchange_services, end_tickers)
         gross_profits = end_balance_usd_value - self.start_balance_usd_value
         taxes = max(gross_profits * (one - self.income_tax), zero)
         net_profits = gross_profits - taxes
         strat_return = net_profits / self.start_balance_usd_value * one_hundred
 
-        bh_gross_profits = (btc_ticker - self.initial_btc_ticker) / self.initial_btc_ticker * self.start_balance_usd_value
+        btc_usdt_pair_name = Pair.name_for_base_and_quote(base='USDT', quote='BTC')
+        inital_btc_ticker = self.initial_tickers.get(btc_usdt_pair_name)
+        end_btc_ticker = end_tickers.get(btc_usdt_pair_name)
+        bh_gross_profits = (end_btc_ticker.bid - inital_btc_ticker.bid) / inital_btc_ticker.bid * self.start_balance_usd_value
         bh_taxes = max(bh_gross_profits * (one - self.ltcg_tax), zero)
         bh_net_profits = bh_gross_profits - bh_taxes
         bh_return = bh_net_profits / self.start_balance_usd_value * one_hundred
 
         alpha = strat_return - bh_return
         net_profits_over_bh = net_profits - bh_net_profits
-
-        return {
+        profit_summary = {
             'alpha': alpha,
             'net_profits_over_bh': net_profits_over_bh,
 
@@ -123,3 +127,48 @@ class ProfitService:
             'net_profits': net_profits,
             'bh_net_profits': bh_net_profits,
         }
+        self.profit_history.append(profit_summary)
+        return profit_summary
+
+    def save_profit_history(self, dest_path):
+        """
+        Convert list of dicts in self.profit_history to a pandas.DataFrame, and save to "dest_path".
+        Args:
+            dest_path:
+
+        Returns:
+
+        """
+
+        snapshots_with_flattened_keys = list(map(self.flatten_snapshot, self.profit_history))
+        df = pandas.DataFrame(snapshots_with_flattened_keys)
+        df.to_csv(dest_path, index=False)
+
+    @staticmethod
+    def flatten_snapshot(profit_snapshot):
+        """
+        Flatten nested dictionary of balance state. The balance state needs to be a separate key because methods
+        such as net_profits use the balances alone to calculate alpha and profits. In other words, the
+        balance keys can't be flattened and at the same level as the alpha and profits keys.
+        Yes:
+        {'balances': {'ETH': 2}, 'alpha': 3}
+
+        No:
+        {'ETH': 2, 'alpha': 3}
+
+        Args:
+            profit_snapshot:
+
+        Returns:
+
+        """
+        flattened_snapshot = {}
+
+        for key, val in profit_snapshot.items():
+            if key == 'balances':
+                for balance_key, balance_val in profit_snapshot[key].items():
+                    flattened_snapshot[balance_key] = balance_val
+            else:
+                flattened_snapshot[key] = val
+
+        return flattened_snapshot

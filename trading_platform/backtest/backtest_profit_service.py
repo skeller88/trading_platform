@@ -35,12 +35,12 @@ class BacktestProfitService:
         self.profit_snapshots = []
         self.idx = 0
 
-    def create_profit_snapshot(self, tickers_by_currency):
+    def profit_summary(self, end_tickers):
         """
         Args:
-            tickers_by_currency:
+            end_tickers:
             after_tax:
-            tickers_by_currency: Dict(currency name, currency ticker in base). All tickers should have the same base.
+            end_tickers: Dict(currency name, currency ticker in base). All tickers should have the same base.
 
         Returns:
         """
@@ -57,13 +57,13 @@ class BacktestProfitService:
             snapshot['bh_profits'] = zero
             snapshot['profits_over_bh'] = zero
         else:
-            strat_return, bh_return = self.rates_of_return(tickers_by_currency)
+            strat_return, bh_return = self.rates_of_return(end_tickers)
             snapshot['strat_return'] = strat_return
             snapshot['bh_return'] = bh_return
             snapshot['alpha'] = strat_return - bh_return
 
             start_balance = self.profit_snapshots[0]['balances']
-            profits, bh_profits = self.net_profits(start_balance, tickers_by_currency)
+            profits, bh_profits = self.net_profits(start_balance, end_tickers)
             snapshot['profits'] = profits
             snapshot['bh_profits'] = bh_profits
             snapshot['profits_over_bh'] = profits - bh_profits
@@ -73,16 +73,16 @@ class BacktestProfitService:
     def balances_across_exchanges(self):
         return BacktestProfitService.merge_and_sum_dicts(self.he.fetch_balances(), self.le.fetch_balances())
 
-    def strat_profit_over_bh(self, tickers_by_currency):
+    def strat_profit_over_bh(self, end_tickers):
         start_balance = self.profit_snapshots[0]['balances']
-        profits, bh_profits = self.net_profits(start_balance, tickers_by_currency)
+        profits, bh_profits = self.net_profits(start_balance, end_tickers)
         return profits - bh_profits
 
-    def net_profits(self, start_balance, tickers_by_currency):
+    def net_profits(self, start_balance, end_tickers):
         """
         Args:
             start_balance:
-            tickers_by_currency pandas.DataFrame: assumes there is a USDT ticker for each currency.
+            end_tickers pandas.DataFrame: assumes there is a USDT ticker for each currency.
 
         Returns:
 
@@ -94,16 +94,16 @@ class BacktestProfitService:
         # in self.profit_history may not match that. So this approach seemed like the lesser of two evils. Make sure to call .alpha() right after
         # .create_balance_snapshot(), or visa versa. Otherwise the alpha may not match the balance snapshot.
         end_balance = self.balances_across_exchanges()
-        end_balance_value = BacktestService.total_usdt_value(end_balance, tickers_by_currency)
+        end_balance_value = BacktestService.total_usdt_value(end_balance, end_tickers)
         gross_profits = end_balance_value - start_balance_value
         # Due to the wash sale rule, can't deduct capital losses. We could refine the strategy to sell everything at the
         # end of the year and realize capital losses, but that's not implemented for now. Let's see if strategy is profitable
         # without that strategy.
         capital_gains = BacktestProfitService.merge_and_sum_dicts(self.he.capital_gains, self.le.capital_gains)
-        taxes = max(BacktestService.total_usdt_value(capital_gains, tickers_by_currency), 0) * self.income_tax
+        taxes = max(BacktestService.total_usdt_value(capital_gains, end_tickers), 0) * self.income_tax
         net_profits = gross_profits - taxes
 
-        end_bh_balance_value = BacktestService.total_usdt_value(start_balance, tickers_by_currency)
+        end_bh_balance_value = BacktestService.total_usdt_value(start_balance, end_tickers)
         # unlike when calculating arg_gross_profits, compute unrealized profits if the balances were to be liquidated
         bh_gross_profits = end_bh_balance_value - start_balance_value
         bh_taxes = max(bh_gross_profits, 0) * self.ltcg_tax
@@ -111,16 +111,16 @@ class BacktestProfitService:
 
         return net_profits, bh_net_profits
 
-    def rates_of_return(self, tickers_by_currency):
+    def rates_of_return(self, end_tickers):
         start_balance = self.profit_snapshots[0]['balances']
-        profits, bh_profits = self.net_profits(start_balance, tickers_by_currency)
+        profits, bh_profits = self.net_profits(start_balance, end_tickers)
         start_balance_usdt_value = BacktestService.total_usdt_value(start_balance, self.initial_tickers)
         strat_return = profits / start_balance_usdt_value * one_hundred
         bh_return = bh_profits / start_balance_usdt_value * one_hundred
         return strat_return, bh_return
 
-    def alpha(self, tickers_by_currency):
-        strat_return, bh_return = self.rates_of_return(tickers_by_currency)
+    def alpha(self, end_tickers):
+        strat_return, bh_return = self.rates_of_return(end_tickers)
         return strat_return - bh_return
 
     def save_profit_history(self, dest_path):
@@ -166,14 +166,6 @@ class BacktestProfitService:
 
         return flattened_snapshot
 
-    def backtest_result(self):
-        """
-        Returns dict: consisting of the backtest result with the "balances" removed
-
-        """
-        last_snapshot = self.profit_snapshots[len(self.profit_snapshots) - 1]
-        del last_snapshot['balances']
-        return last_snapshot
 
     @staticmethod
     def merge_and_sum_dicts(x, y):

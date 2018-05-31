@@ -22,6 +22,7 @@ from heapq import heappush, heappop
 
 from decimal import Decimal
 
+from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.deposit_destination import DepositDestination
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
@@ -64,15 +65,18 @@ class BacktestService(ExchangeServiceAbc):
         # Store the state of balances
         self.__balances = defaultdict(Decimal)
 
-        # Stores the last buy price of a given currency. Used for calculating capital gains and losses.
-        # updated for a given quote currency when buying the currency or depositing currency bought on another exchange
-        # Note that only one buy price can be tracked at a time for a given currency.
+        # Stores the last buy price of a given currency pair. Used for calculating capital gains and losses.
+        # updated for a given pair during a buy order or deposit from another exchange.
+        # Note that only one buy price can be tracked at a time for a given pair.
         self.__buy_prices = {}
 
-        # Updated as trades occur. Used to calculate taxes per base currency.
-        self.capital_gains = defaultdict(Decimal)
-        # Updated as trades occur. Used to calculate taxes per base currency.
-        self.capital_losses = defaultdict(Decimal)
+        # Used to calculate capital gains or losses with respect to USDT.
+        self.usdt_tickers = {}
+
+        # In USDT. Used to calculate taxes. Updated on every create_limit_sell_order().
+        self.capital_gains = zero
+        self.capital_losses = zero
+
         self.balance_history = []
 
         # In order to simulate transfer time of currencies, between exchanges, store pending deposits to the wallet
@@ -159,10 +163,28 @@ class BacktestService(ExchangeServiceAbc):
 
         """
         amount = FinancialData(amount)
+
+        insufficient_order_size = Order(**{
+            # exchange-related data
+            'exchange_id': self.exchange_id,
+            'order_type': OrderType.limit,
+            'order_id': str(utc_timestamp()),
+
+            # numerical data
+            'amount': amount,
+            'price': price,
+
+            # metadata
+            'base': pair.base,
+            'quote': pair.quote,
+            'order_status': OrderStatus.insufficient_order_size,
+            'order_side': OrderSide.sell
+        })
+
         if amount <= zero:
-            return zero
+            return insufficient_order_size
         if self.below_min_base_order_value(amount, price):
-            return zero
+            return insufficient_order_size
         if self.__balances[pair.quote] >= amount:
             # print(self.name + "\tSelling\t%f@%f" % (amount, self.ticker))
             base_amount_received = price * amount / (one + self.trade_fee)
@@ -170,11 +192,12 @@ class BacktestService(ExchangeServiceAbc):
             self.__balances[pair.quote] -= amount
 
             gross = (price - self.__buy_prices[pair.name]) * FinancialData(amount)
+            gross_usdt = self.usdt_tickers[pair.base] * gross
 
-            if gross >= 0:
-                self.capital_gains[pair.base] += gross
+            if gross_usdt >= 0:
+                self.capital_gains += gross_usdt
             else:
-                self.capital_losses[pair.base] += abs(gross)
+                self.capital_losses += abs(gross_usdt)
 
             return Order(**{
                 # exchange-related data
@@ -216,10 +239,15 @@ class BacktestService(ExchangeServiceAbc):
     # Account state
     ###########################################
     def get_balance(self, currency):
-        return self.__balances[currency]
+        total = self.__balances[currency]
+        return Balance(currency=currency, total=total)
 
     def fetch_balances(self):
-        return self.__balances
+        """
+        :return dict(str, Balance):
+        Return a Balance object for compatibility with what LiveExchangeService returns
+        """
+        return {currency: Balance(currency=currency, total=total) for currency, total in self.__balances.items()}
 
     def set_buy_prices(self, buy_prices):
         """
@@ -240,7 +268,7 @@ class BacktestService(ExchangeServiceAbc):
         return self.__buy_prices.get(currency)
 
     @staticmethod
-    def total_usdt_value(funds, tickers_by_currency):
+    def total_usdt_value(funds, end_tickers):
         """
         Value of all funds in USDT currency. First, calculates the value of all tickers in BTC or
         ETH. Then, converts to USDT.
@@ -250,22 +278,22 @@ class BacktestService(ExchangeServiceAbc):
 
         Args:
             funds: can be either capital gains or balances
-            tickers_by_currency: assumed to have the same base
+            end_tickers: assumed to have the same base
 
         Returns FinancialData:
 
         """
         def usdt_value(total_usdt_value, currency):
             usdt_pair = Pair(base='USDT', quote=currency)
-            currency_usdt_price = tickers_by_currency.get(usdt_pair.name)
+            currency_usdt_price = end_tickers.get(usdt_pair.name)
 
             if currency_usdt_price is None:
                 for base in ['BTC', 'ETH']:
                     pair = Pair(base=base, quote=currency)
-                    currency_base_price = tickers_by_currency.get(pair.name)
+                    currency_base_price = end_tickers.get(pair.name)
                     if currency_base_price is not None:
                         usdt_pair = Pair(base='USDT', quote=base)
-                        base_usdt_price = tickers_by_currency.get(usdt_pair.name)
+                        base_usdt_price = end_tickers.get(usdt_pair.name)
                         currency_usdt_price = currency_base_price * base_usdt_price
                         break
 
@@ -360,7 +388,11 @@ class BacktestService(ExchangeServiceAbc):
         raise NotImplementedError('fetch_market_symbols')
 
     def fetch_latest_tickers(self):
-        return
+        """
+        Unlike LiveExchangeService, doesn't return latest tickers.
+        :return list Ticker:
+        """
+        return self.__tickers.values()
 
     def set_tickers(self, tickers):
         self.__tickers = tickers
