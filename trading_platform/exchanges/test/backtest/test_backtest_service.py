@@ -61,10 +61,10 @@ class TestBacktestService(unittest.TestCase):
     def test_create_limit_buy_order(self):
         quote_amount_to_buy = one
         prev_wallet_quote = self.te.get_balance(self.quote)
-        eq_(self.te.get_buy_price(self.quote), self.initial_ticker)
+        eq_(self.te.get_buy_price(self.pair.name), self.initial_ticker)
         new_price = self.initial_ticker * FinancialData(.5)
         self.te.create_limit_buy_order(pair=self.pair, amount=quote_amount_to_buy, price=new_price)
-        eq_(self.te.get_buy_price(self.quote), new_price)
+        eq_(self.te.get_buy_price(self.pair.name), new_price)
         eq_(self.te.get_balance(self.quote), prev_wallet_quote + quote_amount_to_buy)
         eq_(self.te.get_balance(self.base),
             self.initial_base_capital - quote_amount_to_buy * new_price * (one + self.te.trade_fee))
@@ -72,7 +72,7 @@ class TestBacktestService(unittest.TestCase):
     def test_buy_min_base_order_value(self):
         quote_amount_to_buy = one
         prev_wallet_quote = self.te.get_balance(self.quote)
-        eq_(self.te.get_buy_price(self.quote), self.initial_ticker)
+        eq_(self.te.get_buy_price(self.pair.name), self.initial_ticker)
         new_price = self.initial_ticker * FinancialData(.5)
         self.te.min_base_order_value = quote_amount_to_buy * new_price
         quote_purchased = self.te.create_limit_buy_order(pair=self.pair, amount=quote_amount_to_buy, price=new_price)
@@ -84,7 +84,7 @@ class TestBacktestService(unittest.TestCase):
     def test_buy_below_min_base_order_value(self):
         quote_amount_to_buy = one
         prev_wallet_quote = self.te.get_balance(self.quote)
-        eq_(self.te.get_buy_price(self.quote), self.initial_ticker)
+        eq_(self.te.get_buy_price(self.pair.name), self.initial_ticker)
         new_price = self.initial_ticker * FinancialData(.5)
         self.te.min_base_order_value = quote_amount_to_buy * new_price + 1
         quote_purchased = self.te.create_limit_buy_order(pair=self.pair, amount=quote_amount_to_buy, price=new_price)
@@ -123,7 +123,7 @@ class TestBacktestService(unittest.TestCase):
         prev_wallet_base = self.te.get_balance(self.base)
         prev_wallet_quote = self.te.get_balance(self.quote)
         quote_to_sell = self.te.get_balance(self.quote) / two
-        buy_price = self.te.get_buy_price(self.quote)
+        buy_price = self.te.get_buy_price(self.pair.name)
         sell_price = buy_price * (one + FinancialData(.01))
 
         base_received = self.te.create_limit_sell_order(self.pair, quote_to_sell, sell_price, None)
@@ -137,7 +137,7 @@ class TestBacktestService(unittest.TestCase):
         prev_wallet_base = self.te.get_balance(self.base)
         prev_wallet_quote = self.te.get_balance(self.quote)
         quote_to_sell = self.te.get_balance(self.quote) / two
-        buy_price = self.te.get_buy_price(self.quote)
+        buy_price = self.te.get_buy_price(self.pair.name)
         sell_price = buy_price * (one - FinancialData(.01))
 
         base_received = self.te.create_limit_sell_order(self.pair, quote_to_sell, sell_price, None)
@@ -151,7 +151,7 @@ class TestBacktestService(unittest.TestCase):
         prev_wallet_base = self.te.get_balance(self.base)
         prev_wallet_quote = self.te.get_balance(self.quote)
         quote_to_sell = self.te.get_balance(self.quote) / two
-        buy_price = self.te.get_buy_price(self.quote)
+        buy_price = self.te.get_buy_price(self.pair.name)
         sell_price = buy_price * (one - FinancialData(.01))
         self.te.min_base_order_value = quote_to_sell * sell_price
 
@@ -166,7 +166,7 @@ class TestBacktestService(unittest.TestCase):
         prev_wallet_base = self.te.get_balance(self.base)
         prev_wallet_quote = self.te.get_balance(self.quote)
         quote_to_sell = self.te.get_balance(self.quote) / two
-        buy_price = self.te.get_buy_price(self.quote)
+        buy_price = self.te.get_buy_price(self.pair.name)
         sell_price = buy_price * (one - FinancialData(.01))
         self.te.min_base_order_value = quote_to_sell + 1 * sell_price
 

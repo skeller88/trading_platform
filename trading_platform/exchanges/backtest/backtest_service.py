@@ -230,8 +230,8 @@ class BacktestService(ExchangeServiceAbc):
     @staticmethod
     def total_usdt_value(funds, tickers_by_currency):
         """
-        Value of all funds in USD currency. First, calculates the value of all tickers in BTC or
-        ETH. Then, converts to USD.
+        Value of all funds in USDT currency. First, calculates the value of all tickers in BTC or
+        ETH. Then, converts to USDT.
 
         This method is static because for backtesting, the value of the exchange balance at various points in time
         needs to be calculated.

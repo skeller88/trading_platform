@@ -21,9 +21,11 @@ class ProfitServiceTest(unittest.TestCase):
         self.quote = self.pair.quote
         quote_ticker = one
         self.initial_base_capital = FinancialData(20)
+
+        base_usdt_pair = Pair(base='USDT', quote=self.base)
         self.initial_tickers = {
-            self.quote: quote_ticker,
-            self.base: one
+            self.pair.name: quote_ticker,
+            base_usdt_pair.name: one
         }
         self.initial_quote_capital = FinancialData(20)
         self.trade_fee = zero
@@ -80,7 +82,7 @@ class ProfitServiceTest(unittest.TestCase):
         start_balance = self.profit_service.balances_across_exchanges()
         gain = FinancialData(.02)
         end_tickers = {
-            self.base: one,
+            self.pair: one,
             self.quote: self.initial_tickers[self.quote] * (one + gain)
         }
         self.he.capital_gains = gain * (self.he.get_balance(self.quote) + self.le.get_balance(self.quote))

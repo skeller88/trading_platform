@@ -13,6 +13,7 @@ from trading_platform.exchanges.data.order import Order
 from trading_platform.storage.daos.open_order_dao import OpenOrderDao
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
+from trading_platform.utils.datetime_operations import utc_timestamp
 
 SECONDS_PER_MIN = 60
 SECONDS_PER_DAY = SECONDS_PER_MIN * 60 * 24
