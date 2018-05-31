@@ -222,7 +222,19 @@ class BacktestService(ExchangeServiceAbc):
         return self.__balances
 
     def set_buy_prices(self, buy_prices):
+        """
+        For use in testing.
+        TODO - set buy_price within tests by placing buy orders.
+        :param buy_prices:
+        :return:
+        """
         self.__buy_prices = buy_prices
+
+    def set_buy_price(self, currency, buy_price):
+        self.__buy_prices[currency] = buy_price
+
+    def get_buy_prices(self):
+        return self.__buy_prices
 
     def get_buy_price(self, currency):
         return self.__buy_prices.get(currency)
