@@ -23,8 +23,4 @@ class EnvProperties:
 
 
 class S3:
-    output_bucket = os.environ.get('OUTPUT_BUCKET', 'arbitrage-bot')
-
-
-class SNS:
-    arbitrage_alerts_topic_arn = os.environ.get('ARBITRAGE_ALERTS_TOPIC_ARN')
+    output_bucket = os.environ.get('OUTPUT_BUCKET')

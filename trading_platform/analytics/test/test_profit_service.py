@@ -36,8 +36,8 @@ class TestProfitService(unittest.TestCase):
 
         The following test assumes that the current usd value of all exchange balances is << start_balance_usd_value of
         5000, and that btc has significantly increased in value. in other words, high losses on the strategy
-        strategy, and high gains on buy and hold. In this case, bh_taxes > strategy_taxes, bh_return >> strategy_return,
-        and strategy_gross_profits < 0.
+        strategy, and high gains on buy and hold. In this case, bh_taxes > taxes, bh_return >> strat_return,
+        and gross_profits < 0.
 
         Returns:
 
@@ -49,16 +49,16 @@ class TestProfitService(unittest.TestCase):
         for field in ps.profit_summary_fields:
             assert(profit_summary.get(field) is not None)
 
-        assert_less(profit_summary.get('strategy_gross_profits'), zero)
-        assert_greater(profit_summary.get('bh_taxes'), profit_summary.get('strategy_taxes'))
+        assert_less(profit_summary.get('gross_profits'), zero)
+        assert_greater(profit_summary.get('bh_taxes'), profit_summary.get('taxes'))
 
         assert_greater(profit_summary.get('bh_gross_profits'), zero)
-        assert_greater(profit_summary.get('bh_gross_profits'), profit_summary.get('strategy_gross_profits'))
-        assert_greater(profit_summary.get('bh_net_profits'), profit_summary.get('strategy_net_profits'))
-        assert_greater(profit_summary.get('bh_return'), profit_summary.get('strategy_return'))
+        assert_greater(profit_summary.get('bh_gross_profits'), profit_summary.get('gross_profits'))
+        assert_greater(profit_summary.get('bh_net_profits'), profit_summary.get('net_profits'))
+        assert_greater(profit_summary.get('bh_return'), profit_summary.get('strat_return'))
 
-        assert_less(profit_summary.get('strategy_alpha'), zero)
-        assert_less(profit_summary.get('strategy_net_profits_over_bh'), zero)
+        assert_less(profit_summary.get('alpha'), zero)
+        assert_less(profit_summary.get('net_profits_over_bh'), zero)
 
     def test_profit_summary_end_balance_greater_than_start_balance(self):
         """
@@ -67,8 +67,8 @@ class TestProfitService(unittest.TestCase):
 
         The following test assumes that the current usd value of all exchange balances is >> start_balance_usd_value of
         50, and that btc has decreased in value. in other words, high gains on the strategy
-        strategy, and high losses on buy and hold. In this case, strategy_taxes > bh_taxes, strategy_return >> bh_return,
-        and strategy_gross_profits > 0.
+        strategy, and high losses on buy and hold. In this case, taxes > bh_taxes, strat_return >> bh_return,
+        and gross_profits > 0.
 
         Returns:
 
@@ -81,11 +81,11 @@ class TestProfitService(unittest.TestCase):
             assert(profit_summary.get(field) is not None)
 
         assert_less(profit_summary.get('bh_gross_profits'), zero)
-        assert_greater(profit_summary.get('strategy_gross_profits'), zero)
-        assert_greater(profit_summary.get('strategy_taxes'), profit_summary.get('bh_taxes'))
-        assert_less(profit_summary.get('bh_gross_profits'), profit_summary.get('strategy_gross_profits'))
-        assert_less(profit_summary.get('bh_net_profits'), profit_summary.get('strategy_net_profits'))
-        assert_less(profit_summary.get('bh_return'), profit_summary.get('strategy_return'))
+        assert_greater(profit_summary.get('gross_profits'), zero)
+        assert_greater(profit_summary.get('taxes'), profit_summary.get('bh_taxes'))
+        assert_less(profit_summary.get('bh_gross_profits'), profit_summary.get('gross_profits'))
+        assert_less(profit_summary.get('bh_net_profits'), profit_summary.get('net_profits'))
+        assert_less(profit_summary.get('bh_return'), profit_summary.get('strat_return'))
 
-        assert_greater(profit_summary.get('strategy_alpha'), zero)
-        assert_greater(profit_summary.get('strategy_net_profits_over_bh'), zero)
+        assert_greater(profit_summary.get('alpha'), zero)
+        assert_greater(profit_summary.get('net_profits_over_bh'), zero)

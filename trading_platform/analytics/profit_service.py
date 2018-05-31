@@ -23,19 +23,19 @@ class ProfitService:
     usdt_str = 'USDT'
     # fields contained in the response from self.profit_summary()
     profit_summary_fields = [
-        'strategy_alpha',
-        'strategy_net_profits_over_bh',
+        'alpha',
+        'net_profits_over_bh',
 
-        'strategy_return',
+        'strat_return',
         'bh_return',
 
-        'strategy_gross_profits',
+        'gross_profits',
         'bh_gross_profits',
 
-        'strategy_taxes',
+        'taxes',
         'bh_taxes',
 
-        'strategy_net_profits',
+        'net_profits',
         'bh_net_profits',
    ]
 
@@ -94,32 +94,32 @@ class ProfitService:
 
     def profit_summary(self, exchange_services, btc_ticker):
         end_balance_usd_value = self.exchange_balances_usd_value(exchange_services)
-        strategy_gross_profits = end_balance_usd_value - self.start_balance_usd_value
-        strategy_taxes = max(strategy_gross_profits * (one - self.income_tax), zero)
-        strategy_net_profits = strategy_gross_profits - strategy_taxes
-        strategy_return = strategy_net_profits / self.start_balance_usd_value * one_hundred
+        gross_profits = end_balance_usd_value - self.start_balance_usd_value
+        taxes = max(gross_profits * (one - self.income_tax), zero)
+        net_profits = gross_profits - taxes
+        strat_return = net_profits / self.start_balance_usd_value * one_hundred
 
         bh_gross_profits = (btc_ticker - self.initial_btc_ticker) / self.initial_btc_ticker * self.start_balance_usd_value
         bh_taxes = max(bh_gross_profits * (one - self.ltcg_tax), zero)
         bh_net_profits = bh_gross_profits - bh_taxes
         bh_return = bh_net_profits / self.start_balance_usd_value * one_hundred
 
-        strategy_alpha = strategy_return - bh_return
-        strategy_net_profits_over_bh = strategy_net_profits - bh_net_profits
+        alpha = strat_return - bh_return
+        net_profits_over_bh = net_profits - bh_net_profits
 
         return {
-            'strategy_alpha': strategy_alpha,
-            'strategy_net_profits_over_bh': strategy_net_profits_over_bh,
+            'alpha': alpha,
+            'net_profits_over_bh': net_profits_over_bh,
 
-            'strategy_return': strategy_return,
+            'strat_return': strat_return,
             'bh_return': bh_return,
 
-            'strategy_gross_profits': strategy_gross_profits,
+            'gross_profits': gross_profits,
             'bh_gross_profits': bh_gross_profits,
 
-            'strategy_taxes': strategy_taxes,
+            'taxes': taxes,
             'bh_taxes': bh_taxes,
 
-            'strategy_net_profits': strategy_net_profits,
+            'net_profits': net_profits,
             'bh_net_profits': bh_net_profits,
         }

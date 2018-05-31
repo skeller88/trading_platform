@@ -17,8 +17,8 @@ from trading_platform.exchanges.data.financial_data import zero, FinancialData, 
 from trading_platform.exchanges.data.utils import check_required_fields
 from trading_platform.exchanges.live.binance_live_service import BinanceLiveService
 from trading_platform.core.test import data
-from trading_platform.core.test.services.exchange.live.test_live_exchange_service import TestLiveExchangeService
 from trading_platform.core.test.util_methods import eq_ignore_certain_fields
+from trading_platform.exchanges.test.live.test_live_exchange_service import TestLiveExchangeService
 
 
 class TestBinanceLiveService(TestLiveExchangeService):

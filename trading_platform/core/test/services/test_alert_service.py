@@ -2,7 +2,7 @@ import unittest
 
 import boto3
 
-from core.src.services.alert_service import AlertService
+from trading_platform.core.services.alert_service import AlertService
 
 
 class TestAlertService(unittest.TestCase):

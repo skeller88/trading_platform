@@ -9,22 +9,16 @@ import unittest
 from time import sleep
 
 import pandas
-from nose.tools import eq_, assert_true, assert_almost_equal, assert_greater
+from nose.tools import eq_, assert_true, assert_greater
 
-from trading_platform.core.test.constants import Defaults
-from trading_platform.exchanges.data.enums import exchange_ids
-from trading_platform.exchanges.data.enums.order_side import OrderSide
-from trading_platform.exchanges.data.enums.order_status import OrderStatus
-from trading_platform.exchanges.data.enums.order_type import OrderType
-from trading_platform.exchanges.data.financial_data import zero, one, FinancialData
+from trading_platform.core.test.data import Defaults
+from trading_platform.exchanges.data.financial_data import zero
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.utils import check_required_fields
 from trading_platform.exchanges.live.live_subclasses import exchange_service_credentials_for_exchange, \
-    test_exchange_credentials_param
+    test_exchange_credentials_param, exchange_credentials_param
 from trading_platform.storage.daos.balance_dao import BalanceDao
 from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
-from trading_platform.core.test import data
-from trading_platform.core.test.util_methods import eq_ignore_certain_fields
 
 
 class TestLiveExchangeService(unittest.TestCase):
@@ -41,7 +35,8 @@ class TestLiveExchangeService(unittest.TestCase):
         cls.session = cls.engine.scoped_session_maker()
         cls.balance_dao = BalanceDao()
         cls.session = cls.engine.scoped_session_maker()
-        credentials = exchange_service_credentials_for_exchange(cls.live_service_class, param_name=test_exchange_credentials_param)
+        # credentials = exchange_service_credentials_for_exchange(cls.live_service_class, param_name=test_exchange_credentials_param)
+        credentials = exchange_service_credentials_for_exchange(cls.live_service_class, param_name=exchange_credentials_param)
         withdrawal_fees = pandas.DataFrame(
             {'currency': cls.pair.base, 'withdrawal_fee': Defaults.base_withdrawal_fee},
             {'currency': cls.pair.quote, 'withdrawal_fee': Defaults.quote_withdrawal_fee}

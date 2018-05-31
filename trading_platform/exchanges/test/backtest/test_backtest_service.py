@@ -44,7 +44,7 @@ class TestBacktestService(unittest.TestCase):
         self.te.deposit_immediately(self.quote, self.initial_quote_capital)
 
         self.te.set_buy_prices({
-            self.pair.quote: self.initial_ticker
+            self.pair.name: self.initial_ticker
         })
 
         self.completion_timestamp = datetime.datetime.utcnow().timestamp()
