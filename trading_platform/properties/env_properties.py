@@ -17,7 +17,7 @@ class Database:
 
 
 class EnvProperties:
-    debug = os.environ.get('DEBUG')
+    debug = os.environ.get('DEBUG', 'False') == 'True'
     env = os.environ.get('ENV')
     is_prod = env == 'prod'
 

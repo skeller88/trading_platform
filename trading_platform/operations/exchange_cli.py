@@ -11,6 +11,7 @@ from trading_platform.exchanges.live import live_subclasses
 
 exchange_services_by_id = live_subclasses.instantiate(live_subclasses.mvp_live())
 
+
 def cancel_orders():
     """
     Cancel any orders that weren't cancelled by the tests
