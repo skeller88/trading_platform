@@ -1,5 +1,6 @@
 import itertools
 
+from trading_platform.exchanges.data.pair import Pair
 from trading_platform.properties import env_properties
 from trading_platform.storage.s3_operations import write_tickers
 
@@ -8,6 +9,17 @@ class TickerService:
     """
     Fetch and save tickers for all exchanges
     """
+    def fetch_tickers_by_pair_name(self, exchange_services):
+        """
+        :param exchange_services:
+        :return: {(str, str): Ticker}
+        """
+        tickers_list = self.fetch_latest_tickers(exchange_services)
+        self.tickers = {}
+        for ticker in tickers_list:
+            self.tickers[Pair.name_for_base_and_quote(base=ticker.base, quote=ticker.quote)] = ticker
+        return self.tickers
+
     @staticmethod
     def fetch_latest_tickers(exchange_services):
         """

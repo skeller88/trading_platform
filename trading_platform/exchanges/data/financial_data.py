@@ -16,7 +16,8 @@ class FinancialData:
     # For tests, the test result is not as precise, usually due to the fact that pandas don't have a decimal datatype.
     # These tests don't have as much precision as "decimal_scale".
     two_places = 2
-    three_places = 2
+    three_places = 3
+    four_places = 4
     five_places = 5
 
     def __new__(cls, number):

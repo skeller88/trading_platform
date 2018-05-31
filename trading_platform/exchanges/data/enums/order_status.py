@@ -16,17 +16,21 @@ filled - all of the order was filled
 
 
 class OrderStatus:
-    open = 0
-    partially_filled = 1
-    cancelled = 2
-    cancelled_and_partially_filled = 3
-    filled = 4
+    pending = 0
+    insufficient_order_size = 1
+    open = 2
+    partially_filled = 3
+    cancelled = 4
+    cancelled_and_partially_filled = 5
+    filled = 6
 
     statuses_to_names = {
-        0: 'open',
-        1: 'partially_filled',
-        2: 'cancelled',
-        3: 'cancelled_and_partially_filled',
-        4: 'filled'
+        'pending': 0,
+        'insufficient_order_size': 1,
+        'open': 2,
+        'partially_filled': 3,
+        'cancelled': 4,
+        'cancelled_and_partially_filled': 5,
+        'filled': 6,
     }
 
