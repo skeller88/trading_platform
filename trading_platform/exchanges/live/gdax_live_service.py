@@ -1,7 +1,10 @@
+from typing import Dict
+
 import ccxt
 
 import trading_platform.utils.api_request_msgs as api_request_msgs
 from trading_platform.core.constants import exchange_pairs
+from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.enums import exchange_names, exchange_ids
 from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
@@ -56,7 +59,7 @@ class GdaxLiveService(ExchangeServiceAbc):
     def get_balance(self, currency):
         pass
 
-    def fetch_balances(self):
+    def fetch_balances(self) -> Dict[str, Balance]:
         """
         example API response:
         {'info': [{'Currency': 'BTC', 'Balance': 0.0, 'Available': 0.0, 'Pending': 0.0, 'CryptoAddress': '1FdGHn9b9dzwfEfxnjK4DJoy45DnqzaQcF'}, ...]}

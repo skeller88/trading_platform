@@ -12,9 +12,11 @@ import pandas
 from nose.tools import eq_, assert_true, assert_greater
 
 from trading_platform.core.test.data import Defaults
+from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.financial_data import zero
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.utils import check_required_fields
+from trading_platform.exchanges.live.binance_live_service import BinanceLiveService
 from trading_platform.exchanges.live.live_subclasses import exchange_service_credentials_for_exchange, \
     test_exchange_credentials_param, exchange_credentials_param
 from trading_platform.storage.daos.balance_dao import BalanceDao
@@ -22,9 +24,9 @@ from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
 
 
 class TestLiveExchangeService(unittest.TestCase):
-    __test__ = False  # important, makes sure tests are not run on base class
+    __test__ = True  # important, makes sure tests are not run on base class
     # Each inheritor of this class will set these values
-    live_service_class = None
+    live_service_class = BinanceLiveService
     xrp_tag_len = None
 
     @classmethod
@@ -95,6 +97,13 @@ class TestLiveExchangeService(unittest.TestCase):
         check_required_fields(ticker)
         eq_(ticker.base, self.pair.base)
         eq_(ticker.quote, self.pair.quote)
+
+    def test_load_markets(self):
+        markets = self.service.load_markets()
+        if self.service.exchange_id == exchange_ids.gdax:
+            assert_greater(len(markets), 10)
+        else:
+            assert_greater(len(markets), 200)
 
     @staticmethod
     def fetch_open_orders_for_order_instances(exchange_service, order_instances):

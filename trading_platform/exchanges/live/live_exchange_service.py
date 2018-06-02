@@ -1,3 +1,5 @@
+from typing import Dict
+
 import ccxt
 
 from trading_platform.core.constants import exchange_pairs
@@ -287,7 +289,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         balance = self.__balances.get(currency)
         return balance.free if balance is not None else zero
 
-    def fetch_balances(self):
+    def fetch_balances(self) -> Dict[str, Balance]:
         """
         example Binance API response:
         {'info': {'balances': [{'asset': 'BTC', 'free': '0.00000000', 'locked': '0.00000000'}
@@ -367,11 +369,14 @@ class LiveExchangeService(ExchangeServiceAbc):
 
         return ticker_instances
 
-    def get_tickers(self):
+    def get_tickers(self) -> Dict[str, Ticker]:
         return self.__tickers
 
     def get_ticker(self, pair_name):
         return self.__tickers.get(pair_name)
+
+    def load_markets(self):
+        return self.__client.load_markets()
 
     @staticmethod
     def id():

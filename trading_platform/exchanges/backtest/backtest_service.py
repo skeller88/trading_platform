@@ -21,6 +21,7 @@ from functools import reduce
 from heapq import heappush, heappop
 
 from decimal import Decimal
+from typing import Dict
 
 from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.deposit_destination import DepositDestination
@@ -31,6 +32,7 @@ from trading_platform.exchanges.data.enums.order_type import OrderType
 from trading_platform.exchanges.data.financial_data import FinancialData, zero, one
 from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
+from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
 from trading_platform.utils.datetime_operations import utc_timestamp
 from trading_platform.utils.exceptions import InsufficientFundsException
@@ -242,7 +244,7 @@ class BacktestService(ExchangeServiceAbc):
         total = self.__balances[currency]
         return Balance(currency=currency, total=total)
 
-    def fetch_balances(self):
+    def fetch_balances(self) -> Dict[str, Balance]:
         """
         :return dict(str, Balance):
         Return a Balance object for compatibility with what LiveExchangeService returns
@@ -399,6 +401,9 @@ class BacktestService(ExchangeServiceAbc):
 
     def get_ticker(self, pair_name):
         return self.__tickers.get(pair_name)
+
+    def get_tickers(self) -> Dict[str, Ticker]:
+        return self.__tickers
 
     ###########################################
     # Trading - Funding

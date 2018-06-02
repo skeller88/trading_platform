@@ -42,3 +42,9 @@ class TestLiveExchangeServiceLimited(unittest.TestCase):
         check_required_fields(ticker)
         eq_(ticker.base, self.pair.base)
         eq_(ticker.quote, self.pair.quote)
+
+    def test_load_markets(self):
+        if self.service.exchange_id == exchange_ids.gdax:
+            assert_greater(self.service.load_markets(), 10)
+        else:
+            assert_greater(self.service.load_markets(), 200)

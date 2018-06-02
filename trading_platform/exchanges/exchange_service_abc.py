@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 
 from decimal import Decimal
+from typing import Dict
+
+from trading_platform.exchanges.data.balance import Balance
+from trading_platform.exchanges.data.ticker import Ticker
 
 
 class ExchangeServiceAbc(ABC):
@@ -8,6 +12,10 @@ class ExchangeServiceAbc(ABC):
     Bridge class for any client library we use. Don't call an exchange client library directly, instead call via this
     wrapper abstract class method.
     """
+    # Should override
+    exchange_id = None
+    exchange_name = None
+
     def __init__(self, key, secret, trade_fee):
         self.key = key
         self.secret = secret
@@ -112,7 +120,7 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def fetch_balances(self):
+    def fetch_balances(self) -> Dict[str, Balance]:
         pass
 
     ###########################################
@@ -129,6 +137,10 @@ class ExchangeServiceAbc(ABC):
 
     @abstractmethod
     def fetch_latest_tickers(self):
+        pass
+
+    @abstractmethod
+    def get_tickers(self) -> Dict[str, Ticker]:
         pass
 
     @staticmethod
