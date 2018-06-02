@@ -21,8 +21,8 @@ class S3ObjectService():
         self.bucket = s3.Bucket(bucket_name)
         self.object_type = object_type
         self.object_version = object_version
-        # self.max_workers = 1500
-        self.max_workers = 2
+        self.max_workers = 1500
+        # self.max_workers = 2
 
     def get_output_file(self, timedelta_days: int, timedelta_hours: int, time_filter="%Y-%m"):
         filename_prefix = datetime.datetime.utcnow() - datetime.timedelta(days=timedelta_days, hours=timedelta_hours)

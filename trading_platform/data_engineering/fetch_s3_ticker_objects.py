@@ -16,9 +16,9 @@ def main(object_version, start_datetime, end_datetime):
                                      multithreading=True)
 
 # main(object_version='4', start_datetime=datetime.datetime(2018, 3, 25), end_datetime=datetime.datetime(2018, 6, 1))
-# main(object_version='4', start_datetime=datetime.datetime(2018, 5, 29), end_datetime=datetime.datetime(2018, 6, 1))
+main(object_version='4', start_datetime=datetime.datetime(2018, 5, 29), end_datetime=datetime.datetime(2018, 6, 1))
 # main(object_version='3', start_datetime=datetime.datetime(2018, 4, 7), end_datetime=datetime.datetime(2018, 4, 27))
 # V1 and V2 data. See ticker_schema_version_changelog.md for details. The filename contains v0, incorrectly, but the
 # version is 1 or 2. The script will correct that bug and write out the correct filename.
-main(object_version='0', start_datetime=datetime.datetime(2018, 1, 19), end_datetime=datetime.datetime(2018, 4, 7))
+# main(object_version='0', start_datetime=datetime.datetime(2018, 1, 19), end_datetime=datetime.datetime(2018, 4, 7))
 # main(object_version='3', start_datetime=datetime.datetime(2018, 4, 19), end_datetime=datetime.datetime(2018, 4, 27))
