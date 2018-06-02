@@ -7,14 +7,9 @@ provision_aws.sh
 
 # Data files - .zip, .csv
 *.zip*
-data/arbitrage
-data/arbitrage_finder
+data/tickers
 data/order
-data/simulation
-data/ticker
-data/windows
 data/backtest
-data/kaiko/
 
 # Deployment
 .serverless/**

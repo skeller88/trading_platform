@@ -5,9 +5,12 @@ and grouping csv files by time.
 Also performs other file operations such as creating parent directories for a new directory.
 """
 import csv
+import datetime
 import re
 
 import os
+from typing import Generator
+
 import pandas as pd
 from setuptools import glob
 
@@ -81,6 +84,18 @@ class FileService:
 
                 if start_timestamp <= file_timestamp < end_timestamp:
                     yield csv_filename
+
+    @staticmethod
+    def datetime_generator(start_datetime: datetime.datetime, end_datetime: datetime.datetime,
+                           timedelta: datetime.timedelta) -> Generator[datetime.datetime, None, None]:
+        """
+        Generate datetimes within a range >= start_datetime and < end_datetime
+        """
+        next_datetime = start_datetime
+        while next_datetime < end_datetime:
+            yield next_datetime
+            next_datetime = next_datetime + timedelta
+
 
     @staticmethod
     def fetch_tickers(exchange_id, start_timestamp, end_timestamp, data_operation_config, distinct=True):

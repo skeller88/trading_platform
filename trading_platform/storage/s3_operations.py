@@ -6,6 +6,7 @@ from datetime import datetime
 import smart_open
 
 from trading_platform.exchanges.data.ticker import Ticker
+from trading_platform.utils.datetime_operations import strftime_minutes
 
 LOCAL_DATA_DIR = "/Users/shanekeller/Documents/arbitrage_bot/data"
 
@@ -16,7 +17,7 @@ def write_tickers(write_to_s3, bucket='arbitrage-bot', tickers=[]):
 
 def write_result(write_to_s3, bucket, results, result_class, file_version, filename_date_suffix=True):
     result_class_name = result_class.__name__.lower()
-    date_suffix = '_{0}'.format(datetime.utcnow().strftime("%Y-%m-%dT%H:%M")) if filename_date_suffix else ''
+    date_suffix = '_{0}'.format(datetime.utcnow().strftime(strftime_minutes)) if filename_date_suffix else ''
     filename = '{0}_v{1}{2}.csv'.format(result_class_name, file_version, date_suffix)
     fieldnames = result_class.csv_fieldnames()
     if write_to_s3:

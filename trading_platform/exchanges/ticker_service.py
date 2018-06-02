@@ -1,14 +1,31 @@
 import itertools
+import time
+
+import pandas
 
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.properties import env_properties
 from trading_platform.storage.s3_operations import write_tickers
+from trading_platform.utils.logging import print_if_debug_enabled
 
 
 class TickerService:
     """
     Fetch and save tickers for all exchanges
     """
+    def run_ticker_service(self, debug, exchange_services):
+        print_if_debug_enabled(debug, 'start fetch_latest_tickers')
+        start_fetch_ticker = time.time()
+        tickers_list = TickerService.fetch_latest_tickers(exchange_services)
+
+        tickers_df = pandas.DataFrame(list(map(lambda ticker: ticker.to_dict(), tickers_list)))
+        tickers_df = tickers_df.astype(dtype={'ask': 'float64', 'bid': 'float64', 'last': 'float64'})
+
+        end_fetch_ticker = time.time()
+        print_if_debug_enabled(debug, 'end fetch_latest_tickers: {0} seconds'.format(
+            end_fetch_ticker - start_fetch_ticker))
+        return tickers_df
+
     def fetch_tickers_by_pair_name(self, exchange_services):
         """
         :param exchange_services:
