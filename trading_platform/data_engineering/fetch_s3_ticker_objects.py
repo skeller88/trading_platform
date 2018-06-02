@@ -7,13 +7,15 @@ import os
 from trading_platform.aws_utils.s3_object_service import S3ObjectService
 
 # V1+ fieldnames
+from trading_platform.utils.datetime_operations import strftime_days
+
 
 def main(object_version, start_datetime, end_datetime):
     s3_object_service = S3ObjectService(object_version=object_version)
     output_dir = os.getcwd().replace('trading_platform/trading_platform/data_engineering', 'trading_data/tickers/debug')
     s3_object_service.window_objects(output_dir=output_dir, start_datetime=start_datetime,
                                      end_datetime=end_datetime, timedelta=datetime.timedelta(days=1),
-                                     multithreading=True)
+                                     strftime=strftime_days, multithreading=True)
 
 # main(object_version='4', start_datetime=datetime.datetime(2018, 3, 25), end_datetime=datetime.datetime(2018, 6, 1))
 main(object_version='4', start_datetime=datetime.datetime(2018, 5, 29), end_datetime=datetime.datetime(2018, 6, 1))

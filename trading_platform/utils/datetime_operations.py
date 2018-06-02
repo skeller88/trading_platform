@@ -4,6 +4,7 @@ from datetime import timezone
 strftime_milliseconds = "%Y-%m-%dT%H:%M:%S%z"
 strftime_seconds = "%Y-%m-%dT%H:%M:%S"
 strftime_minutes = "%Y-%m-%dT%H:%M"
+strftime_hours = "%Y-%m-%dT%H"
 strftime_days = "%Y-%m-%d"
 seconds_per_minute = 60
 seconds_per_hour = 3600

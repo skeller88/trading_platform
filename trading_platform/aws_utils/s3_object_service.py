@@ -4,25 +4,27 @@ import os
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict, Generator
+from typing import List, Dict, Optional, Tuple
 
 import boto3
 import pandas
-from boto3 import s3
+from botocore.exceptions import EndpointConnectionError
 
 from trading_platform.core.services.file_service import FileService
-from trading_platform.exchanges.data.ticker import Ticker
-from trading_platform.utils.datetime_operations import strftime_days, strftime_minutes
 
 
 class S3ObjectService():
-    def __init__(self, bucket_name='arbitrage-bot', object_type='ticker', object_version='0'):
-        s3 = boto3.resource('s3')
-        self.bucket = s3.Bucket(bucket_name)
+    def __init__(self, bucket_name='arbitrage-bot', object_type='ticker', object_version='0', max_workers=1500):
+        self.bucket_name = bucket_name
         self.object_type = object_type
         self.object_version = object_version
-        self.max_workers = 1500
+        self.max_workers = max_workers
         # self.max_workers = 2
+
+    def bucket_connection(self):
+        session = boto3.session.Session()
+        s3 = session.resource('s3')
+        return s3.Bucket(self.bucket_name)
 
     def get_output_file(self, timedelta_days: int, timedelta_hours: int, time_filter="%Y-%m"):
         filename_prefix = datetime.datetime.utcnow() - datetime.timedelta(days=timedelta_days, hours=timedelta_hours)
@@ -34,18 +36,22 @@ class S3ObjectService():
 
         return output_file, prefix
 
-    def get_data_for_object(self, object) -> str:
+    def get_data_for_object(self, object) -> Tuple[str, Optional[str]]:
         """
 
         Args:
-            prefix:
+            object:
 
         Returns:
 
         """
-        response: Dict = object.get()
-        body: str = response['Body'].read().decode('utf-8')
-        return body
+        try:
+            response: Dict = object.get()
+            body: str = response['Body'].read().decode('utf-8')
+            return object.key, body
+        except EndpointConnectionError:
+            print('Failed endpoint connection when fetching object {0}'.format(object.key))
+            return object.key, None
 
     def write_data(self, output_file: str, lines: List[str], fieldnames: List[str]) -> None:
         output_dir: str = os.path.dirname(output_file)
@@ -67,7 +73,7 @@ class S3ObjectService():
                     # print(line)
 
     def window_objects(self, output_dir: str, start_datetime: datetime.datetime, end_datetime: datetime.datetime,
-                       timedelta: datetime.timedelta, multithreading: bool) -> None:
+                       timedelta: datetime.timedelta, strftime: str, multithreading: bool) -> None:
         """
         Windows objects according to timedelta, and writes to output_dir. If multithreading, data in each file is
         not in the same order.
@@ -86,28 +92,46 @@ class S3ObjectService():
 
         def fetch_and_write_objects_with_datetime_prefix(datetime_instance):
             start = time.time()
-            datetime_prefix = datetime_instance.strftime(strftime_days)
+            datetime_prefix = datetime_instance.strftime(strftime)
             file_prefix = '{0}_v{1}_{2}'.format(self.object_type, self.object_version, datetime_prefix)
             prefix = '{0}/{1}'.format(self.object_type, file_prefix)
-            objects = self.bucket.objects.filter(Prefix=prefix)
+            objects = self.bucket_connection().objects.filter(Prefix=prefix)
+            successes: List[str] = []
+            failures: List[str] = []
+            data_for_prefix: List = []
+
+            def buffer_object_data(object_request_result: Tuple[str, Optional[str]]):
+                object_key: str = result_tuple[0]
+                object_body: Optional[str] = result_tuple[1]
+                if object_body is not None:
+                    successes.append(object_key)
+                    for line in object_body.split('\n'):
+                        line = line.replace('\r', '')
+                        data_for_prefix.append(line.split(','))
+                else:
+                    failures.append(object_key)
+
             if multithreading:
-                data_for_prefix = []
                 with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                     futures = [executor.submit(self.get_data_for_object, object) for object in objects]
                     for future in as_completed(futures):
                         try:
-                            object_body: str = future.result()
-                            if object_body is not None:
-                                for line in object_body.split('\n'):
-                                    data_for_prefix.append(line)
-                        except Exception:
+                            result_tuple: Tuple[str, Optional[str]] = future.result()
+                            buffer_object_data(result_tuple)
+                        except Exception as ex:
                             traceback.print_exc()
+                            failures.append("exception")
+
             else:
-                data_for_prefix: List = []
                 for object in objects:
-                    body: str = self.get_data_for_object(object)
-                    for line in body.split('\n'):
-                        data_for_prefix.append(line)
+                    result_tuple: Tuple[str, Optional[str]] = self.get_data_for_object(object)
+                    buffer_object_data(result_tuple)
+
+            print('fetched all data')
+
+            if len(failures) > 0:
+                list(map(print, failures))
+                raise Exception('failed')
 
             if len(data_for_prefix) > 1:
                 header: List[str] = data_for_prefix.pop(0)
@@ -116,15 +140,17 @@ class S3ObjectService():
                 # Deal with the case in which the file name doesn't match the version of the file, and a
                 # case in which a file has data for multiple versions. See ticker_schema_version_changelog.md for details.
                 def df_to_csv(version):
-                    # has the nice side effect of dropping duplicate header rows
+                    # drop duplicate header rows or null rows
+                    if version is None or version == 'version':
+                        return
                     df_for_version = df[df['version'] == version]
                     file_prefix: str = '{0}_v{1}_{2}'.format(self.object_type, version, datetime_prefix)
                     # Example, ticker_v1_2018-05-01.csv
                     output_filename: str = '{0}.csv'.format(file_prefix)
                     output_filepath: str = os.path.join(output_dir, output_filename)
-                    df_for_version.to_csv(output_filepath)
+                    df_for_version.to_csv(output_filepath, index=False)
 
-                map(df_to_csv, df['version'].unique())
+                list(map(df_to_csv, df['version'].unique()))
             else:
                 print('No objects found with prefix {0}'.format(prefix))
 

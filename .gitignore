@@ -6,6 +6,7 @@
 provision_aws.sh
 
 # Data files - .zip, .csv
+tmp_test_data
 *.zip*
 data/tickers
 data/order
