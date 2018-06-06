@@ -7,10 +7,10 @@ import requests
 from bs4 import BeautifulSoup
 from pandas.errors import ParserError
 
-from trading_platform.exchanges.data import standardizers
-from trading_platform.exchanges.data.enums import exchange_names, exchange_ids
-from trading_platform.exchanges.data.financial_data import FinancialData
 from trading_platform.exchanges import withdrawal_fees_dfs
+from trading_platform.exchanges.data import standardizers
+from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.exchanges.data.financial_data import FinancialData
 
 
 class WithdrawalFeesService:

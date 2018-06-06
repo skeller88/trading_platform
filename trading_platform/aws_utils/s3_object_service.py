@@ -1,6 +1,7 @@
 import csv
 import datetime
 import os
+import random
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -45,13 +46,16 @@ class S3ObjectService():
         Returns:
 
         """
-        try:
-            response: Dict = object.get()
-            body: str = response['Body'].read().decode('utf-8')
-            return object.key, body
-        except EndpointConnectionError:
-            print('Failed endpoint connection when fetching object {0}'.format(object.key))
-            return object.key, None
+        for attempt in range(3):
+            try:
+                response: Dict = object.get()
+                body: str = response['Body'].read().decode('utf-8')
+                return object.key, body
+            except EndpointConnectionError:
+                print('Failed endpoint connection when fetching object {0}'.format(object.key))
+                time.sleep(random.randint(4, 10))
+
+        return object.key, None
 
     def write_data(self, output_file: str, lines: List[str], fieldnames: List[str]) -> None:
         output_dir: str = os.path.dirname(output_file)
