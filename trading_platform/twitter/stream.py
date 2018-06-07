@@ -1,4 +1,5 @@
 import os
+from typing import Type
 
 import tweepy
 from tweepy import OAuthHandler
@@ -13,7 +14,7 @@ class Stream(tweepy.Stream):
     stream = Stream(auth=auth, listener=stream_listener)
     """
     @classmethod
-    def for_listener(cls, stream_listener_cls: StreamListener):
+    def for_listener(cls, stream_listener_cls: Type[StreamListener]):
         auth = OAuthHandler(TwitterProperties.consumer_key, TwitterProperties.consumer_secret)
         auth.set_access_token(TwitterProperties.access_token, TwitterProperties.access_token_secret)
         api = tweepy.API(auth)
