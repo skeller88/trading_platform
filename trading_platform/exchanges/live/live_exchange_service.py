@@ -1,6 +1,7 @@
 from typing import Dict
 
 import ccxt
+from ccxt import ExchangeError
 
 from trading_platform.core.constants import exchange_pairs
 from trading_platform.exchanges.data import standardizers
@@ -236,11 +237,16 @@ class LiveExchangeService(ExchangeServiceAbc):
     ###########################################
 
     def fetch_deposit_destination(self, currency, params={}):
-        response = self.__client.fetch_deposit_address(currency)
-        # Make 'status' parameter consistent across exchanges.
-        if response['tag'] == '':
-            response['tag'] = None
-        return DepositDestination(response['address'], response['tag'], response['status'])
+        try:
+            response = self.__client.fetch_deposit_address(currency)
+            # Make 'status' parameter consistent across exchanges.
+            if response['tag'] == '':
+                response['tag'] = None
+            return DepositDestination(response['address'], response['tag'], response['status'])
+        except ExchangeError as ex:
+            if DepositDestination.offline_status in str(ex):
+                return DepositDestination(None, None, DepositDestination.offline_status)
+            raise ex
 
     def withdraw_all(self, currency, address, tag=None, params={}):
         """
