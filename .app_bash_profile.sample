@@ -1,0 +1,12 @@
+# Twitter API
+CONSUMER_KEY=
+TF_VAR_consumer_key=$CONSUMER_KEY
+CONSUMER_SECRET=
+TF_VAR_consumer_secret=$CONSUMER_SECRET
+
+# After the step above, you will be redirected to your app's page.
+# Create an access token under the the "Your access token" section
+ACCESS_TOKEN=
+TF_VAR_access_token=$ACCESS_TOKEN
+ACCESS_TOKEN_SECRET=
+TF_VAR_access_token_secret=$ACCESS_TOKEN_SECRET
