@@ -1,4 +1,7 @@
 import tweepy
+from tweepy import OAuthHandler
+
+from trading_platform.twitter.twitter_properties import TwitterProperties
 
 
 class Api(tweepy.API):
