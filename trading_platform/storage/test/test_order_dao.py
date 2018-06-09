@@ -83,6 +83,12 @@ class TestOrderDao(unittest.TestCase):
         session, fetched = self.dao.fetch_by_db_id(self.session, int(utc_timestamp()))
         eq_(fetched, None)
 
+    def test_fetch_by_order_index(self):
+        self.dao.save(session=self.session, commit=True, popo=self.dto1)
+        fetched = self.dao.fetch_by_order_index(session=self.session, order_index=self.dto1.order_index)
+        eq_(len(fetched), 1)
+        eq_ignore_certain_fields(fetched[0], self.dto1, ['db_id', 'created_at'])
+
     def test_fetch_earliest_with_order_index(self):
         self.dao.save(session=self.session, commit=True, popo=self.dto1)
         # dto2 is now the earliest

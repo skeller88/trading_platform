@@ -68,19 +68,19 @@ class Order:
         # Cancelled orders won't have order metadata. 
         'order_side',
         'order_type'
+        
+        # Pending orders won't have the following fields:
+        'processing_time',
+        'order_index',
+        'order_id',
     ]
 
     required_fields = [
         # app metadata
-        'processing_time',
         'version',
-
-        # database metadata
-        'order_index',
 
         # exchange-related metadata
         'exchange_id',
-        'order_id',
 
         # order metadata.
         'base',
@@ -109,9 +109,13 @@ class Order:
 
             # database metadata
             db_id: int
-            order_index: str. Used to query an order in the database without the db id, so must be able to be constructed
-            from exchange data alone. Also used to group multiple snapshots (database entities) of the same order over
-            time. Example: "exchange-1-7754382".
+                    #
+            order_index: str. Not unique, but all orders with this index will be associated with the same order on a
+                given exchange. Used to query an order in the database without the db id, so must be able to be constructed
+                from exchange data alone. Also used to group multiple snapshots (database entities) and track the state of
+                an order over time. Example: "exchange-1-7754382".
+
+                Can be either "exchange_id-order_id" or "[exchange_id]_[quote]_[base]_[order_type]_[price]_[amount]"
 
             margin: float
             created_at: Decimal
@@ -139,13 +143,11 @@ class Order:
         processing_time = kwargs.get('processing_time')
         # Order instance could either be instantiated for the first time or populated with data from a DTO
         self.processing_time = processing_time if processing_time is not None else utc_timestamp()
-        self.version = 0
+        self.version = kwargs.get('version') if kwargs.get('version') is not None else 0
+        self.trade_saga_id = kwargs.get('trade_saga_id', 0)
 
         # database data
         self.db_id = kwargs.get('db_id')
-        # Not unique, but all orders with this index will be associated with the same order on a given exchange.
-        # Necessary to track the state of an order over time.
-        self.order_index = '{0}-{1}'.format(kwargs.get('exchange_id'), kwargs.get('order_id'))
         self.created_at = kwargs.get('created_at')
         self.updated_at = kwargs.get('updated_at')
 
@@ -166,6 +168,22 @@ class Order:
         self.quote = kwargs.get('quote')
         self.order_status = kwargs.get('order_status')
         self.order_side = kwargs.get('order_side')
+
+        order_index = kwargs.get('order_index')
+
+        if order_index is not None:
+            self.order_index = order_index
+        else:
+            index_fields = [
+                'trade_saga_id',
+                'exchange_id',
+                'quote',
+                'base',
+                'order_type',
+                'price',
+                'amount'
+            ]
+            self.order_index = '_'.join(map(lambda field: getattr(self, field), index_fields))
 
         # comment out for now because I don't want to deal with the Order in run_backtest having all of the required
         # fields
@@ -244,7 +262,6 @@ class Order:
             'price',
             'remaining'
         ]
-
 
     @classmethod
     def csv_fieldnames(cls):

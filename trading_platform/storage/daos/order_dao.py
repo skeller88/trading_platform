@@ -65,7 +65,7 @@ class OrderDao(Dao):
             if dtos is not None:
                 return list(map(lambda dto: dto.to_popo(), dtos))
 
-            return session, None
+            return []
         except Exception as exception:
             print('rolling back due to exception')
             traceback.print_exc()
