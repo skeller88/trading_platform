@@ -14,9 +14,8 @@ class Stream(tweepy.Stream):
     stream = Stream(auth=auth, listener=stream_listener)
     """
     @classmethod
-    def for_listener(cls, stream_listener_cls: Type[StreamListener]) -> 'Stream':
+    def for_listener(cls, stream_listener: Type[StreamListener]) -> 'Stream':
         auth = OAuthHandler(TwitterProperties.consumer_key, TwitterProperties.consumer_secret)
         auth.set_access_token(TwitterProperties.access_token, TwitterProperties.access_token_secret)
         api = tweepy.API(auth)
-        stream_listener: StreamListener = stream_listener_cls()
         return cls(auth=api.auth, listener=stream_listener)
