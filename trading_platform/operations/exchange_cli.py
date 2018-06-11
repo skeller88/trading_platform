@@ -10,6 +10,7 @@ from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.live import live_subclasses
 
 exchange_services_by_id = live_subclasses.instantiate(live_subclasses.mvp_live())
+bittrex = exchange_services_by_id.get(exchange_ids.bittrex)
 
 
 def cancel_orders():
@@ -42,24 +43,9 @@ def fetch_balances():
             print(currency, balance.free)
 
 
-def execute(exchange_id, method_name, **params):
-    exchange = exchange_services_by_id.get(exchange_id)
-    method = getattr(exchange,  method_name)
-    return method(**params)
+# print(execute(exchange_ids.bittrex, 'fetch_deposit_destination', currency='ZEN', params={}))
+print(bittrex.fetch_order_book(symbol=Pair(base='BTC', quote='ETH').name_for_exchange_clients, limit=None, params={}))
 
-
-def create_limit_order(exchange_id, order_side, pair, amount, price):
-    exchange = exchange_services_by_id.get(exchange_id)
-
-    if order_side == OrderSide.buy:
-        order = exchange.create_limit_buy_order(pair, amount, price)
-    else:
-        order = exchange.create_limit_sell_order(pair, amount, price)
-
-    print(order)
-
-
-print(execute(exchange_ids.bittrex, 'fetch_deposit_destination', currency='ZEN', params={}))
 # Uncomment the desired operation
 # cancel_orders()
 # fetch_balances()
@@ -70,4 +56,3 @@ print(execute(exchange_ids.bittrex, 'fetch_deposit_destination', currency='ZEN',
 # order = fetch_order(order_id=19269522, symbol=Pair(base='ETH', quote='OMG').name_for_exchange_clients, exchange_id=exchange_ids.binance)
 # for k, v in order.items():
 #     print(k, v, '\n')
-

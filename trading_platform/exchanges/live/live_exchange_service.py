@@ -381,6 +381,9 @@ class LiveExchangeService(ExchangeServiceAbc):
     def get_ticker(self, pair_name):
         return self.__tickers.get(pair_name)
 
+    def fetch_order_book(self, symbol, limit=None, params={}):
+        return self.__client.fetch_order_book(symbol=symbol, limit=limit, params=params)
+
     def load_markets(self):
         return self.__client.load_markets()
 

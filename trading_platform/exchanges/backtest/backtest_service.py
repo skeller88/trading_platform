@@ -405,6 +405,9 @@ class BacktestService(ExchangeServiceAbc):
     def get_tickers(self) -> Dict[str, Ticker]:
         return self.__tickers
 
+    def fetch_order_book(self, symbol, limit=None, params={}):
+        raise NotImplementedError
+
     ###########################################
     # Trading - Funding
     ###########################################

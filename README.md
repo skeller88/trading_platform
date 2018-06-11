@@ -13,6 +13,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Serverless
+Make sure serverless is installed globally:
+`npm install -g serverless`
+
+Install serverless plugins in repo: 
+`npm install --save serverless-python-requirements`
+
 ## Set up Python environment for ipython notebooks
 Due to ipython requiring different dependencies from the app, a separate environment is configured via an environment.yml
 file. 

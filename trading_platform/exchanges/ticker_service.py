@@ -1,9 +1,11 @@
 import itertools
 import time
+from typing import List
 
 import pandas
 
 from trading_platform.exchanges.data.pair import Pair
+from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.properties import env_properties
 from trading_platform.storage.s3_operations import write_tickers
 from trading_platform.utils.logging import print_if_debug_enabled
@@ -47,7 +49,7 @@ class TickerService:
 
         """
         def fetch_for_exchange(exchange_service):
-            tickers_list = exchange_service.fetch_latest_tickers()
+            tickers_list: List[Ticker] = exchange_service.fetch_latest_tickers()
             if tickers_list is not None:
                 return tickers_list
 

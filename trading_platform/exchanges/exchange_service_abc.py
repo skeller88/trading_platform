@@ -127,6 +127,10 @@ class ExchangeServiceAbc(ABC):
     # Market state
     ###########################################
     @abstractmethod
+    def fetch_order_book(self, symbol, limit=None, params={}):
+        pass
+
+    @abstractmethod
     def fetch_market_symbols(self):
         """
         fetch_markets.py was used to get a list of pairs for each exchange, and those lists were manually copied into

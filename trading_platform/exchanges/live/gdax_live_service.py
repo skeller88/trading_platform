@@ -33,7 +33,7 @@ class GdaxLiveService(ExchangeServiceAbc):
 
     def __init__(self, key, secret, withdrawal_fees):
         super().__init__(key=key, secret=secret, trade_fee=.0025)
-        self.client = ccxt.gdax({
+        self.__client = ccxt.gdax({
             'apiKey': key,
             'secret': secret
         })
@@ -44,13 +44,13 @@ class GdaxLiveService(ExchangeServiceAbc):
     ###########################################
 
     def cancel_order(self, order_id, market, params={}):
-        self.client.cancel_order(order_id, market, params)
+        self.__client.cancel_order(order_id, market, params)
 
     def create_limit_buy_order(self, symbol, amount, price, *params):
-        return self.client.create_limit_buy_order(symbol, amount, price, params)
+        return self.__client.create_limit_buy_order(symbol, amount, price, params)
 
     def create_limit_sell_order(self, symbol, amount, price, *params):
-        return self.client.create_limit_sell_order(symbol, amount, price, params)
+        return self.__client.create_limit_sell_order(symbol, amount, price, params)
 
     ###########################################
     # Account state
@@ -65,7 +65,7 @@ class GdaxLiveService(ExchangeServiceAbc):
         {'info': [{'Currency': 'BTC', 'Balance': 0.0, 'Available': 0.0, 'Pending': 0.0, 'CryptoAddress': '1FdGHn9b9dzwfEfxnjK4DJoy45DnqzaQcF'}, ...]}
         :return:
         """
-        data = make_api_request(api_request_msgs.BALANCE_ERR.format(self.name()), self.client.fetch_balance)
+        data = make_api_request(api_request_msgs.BALANCE_ERR.format(self.name()), self.__client.fetch_balance)
 
         if data is None:
             return
@@ -79,18 +79,18 @@ class GdaxLiveService(ExchangeServiceAbc):
         }
 
     def fetch_closed_orders(self):
-        self.client.load_markets()
+        self.__client.load_markets()
         return make_api_request(
-            api_request_msgs.OPEN_ORDERS_ERR.format(self.name()), self.client.fetch_closed_orders)
+            api_request_msgs.OPEN_ORDERS_ERR.format(self.name()), self.__client.fetch_closed_orders)
 
     def fetch_market_symbols(self):
-        # self.client.load_markets()
-        # return self.client.markets.keys()
+        # self.__client.load_markets()
+        # return self.__client.markets.keys()
         return exchange_pairs.gdax
 
     def fetch_open_orders(self, symbol=None):
         order_data_list = make_api_request(
-            api_request_msgs.OPEN_ORDERS_ERR.format(exchange_names.poloniex), self.client.fetch_open_orders,
+            api_request_msgs.OPEN_ORDERS_ERR.format(exchange_names.poloniex), self.__client.fetch_open_orders,
             symbol)
 
         return [Order(**order_data) for order_data in order_data_list] \
@@ -138,7 +138,7 @@ class GdaxLiveService(ExchangeServiceAbc):
 
     def fetch_ticker(self, market):
         ticker = make_api_request(
-            api_request_msgs.TICKER_ERR.format(self.name()), self.client.fetch_ticker, market)
+            api_request_msgs.TICKER_ERR.format(self.name()), self.__client.fetch_ticker, market)
 
         pair_name, ticker_instance = Ticker.from_exchange_data(ticker, self.id(), Ticker.current_version)
         if ticker_instance is None:
@@ -151,6 +151,9 @@ class GdaxLiveService(ExchangeServiceAbc):
 
     def get_ticker(self, pair_name):
         return self.__tickers.get(pair_name)
+
+    def fetch_order_book(self, symbol, limit=None, params={}):
+        return self.__client.fetch_order_book(symbol=symbol, limit=limit, params=params)
 
     def order_book(self, product_id, level=1):
         """

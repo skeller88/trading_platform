@@ -1,0 +1,22 @@
+service: trading_platform
+
+provider:
+  name: aws
+  runtime: python3.6
+
+package:
+  exclude:
+    - .*/**
+  include:
+    - trading_platform/**
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    # pull dependencies from private repos
+    pipCmdExtraArgs:
+      - --cache-dir
+      - .requirements-cache
