@@ -1,7 +1,7 @@
 import traceback
 from abc import ABC
 from functools import wraps
-from typing import Dict, Set
+from typing import Dict, Set, Callable, Optional
 
 from sqlalchemy.orm import Session
 
@@ -22,11 +22,11 @@ class StrategyStateMachineServiceAbc(ABC):
         self.order_dao = order_dao
         self.open_order_dao = open_order_dao
 
-    def next_state(self, next=None, *args, **kwargs):
+    def next_state(self, next: Optional[Callable] = None, *args, **kwargs):
         current = self.state['current_state']
         self.state[current]['completed'] = True
         next = self.state[current]['success'] if next is None else next
-        self.state['current_state'] = next
+        self.state['current_state'] = next.__name__
         next(*args, **kwargs)
 
     def place_orders(self, orders: Set[Order], session: Session):

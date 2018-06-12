@@ -16,7 +16,7 @@ from trading_platform.storage.daos.order_dao import OrderDao
 
 class NewMarketStrategyStateMachineService(StrategyStateMachineServiceAbc):
     def __init__(self, logger, exchanges_by_id: Dict[int, ExchangeServiceAbc],
-                 open_order_dao: OpenOrderDao, order_dao: OrderDao, sell_signal: Callable):
+                 open_order_dao: OpenOrderDao, order_dao: OrderDao, sell_price: FinancialData, sell_price_adjuster: Callable):
         state: Dict = {
             'current_state': 'initialize',
             'state_id': None,
@@ -25,32 +25,30 @@ class NewMarketStrategyStateMachineService(StrategyStateMachineServiceAbc):
                 'success': self.buy
             },
             'buy': {
-                'function': self.buy,
                 'completed': False,
                 'success': self.verify_buy,
             },
             'verify_buy': {
-                'function': self.verify_buy,
                 'completed': False,
-                'success': 'watch_for_sell_signal'
+                'success': self.watch_order
             },
-            'watch_for_sell_signal': {
+            'watch': {
                 'completed': False,
-                'success': 'sell'
+                'success': self.adjust_sell_price
             },
-            'sell': {
+            'adjust_sell_price': {
                 'completed': False,
-                'success': 'verify_sell'
+                'success': self.watch_order
             },
             'verify_sell': {
                 'completed': False,
-                'success': 'finish'
-            },
-
+                'success': self.finish
+            }
         }
         super().__init__(state=state, logger=logger, exchanges_by_id=exchanges_by_id,
                          open_order_dao=open_order_dao, order_dao=order_dao)
-        self.sell_signal = sell_signal
+        self.sell_price: FinancialData = sell_price
+        self.sell_price_adjuster: Callable = sell_price_adjuster
         self.bittrex = exchanges_by_id.get(exchange_ids.bittrex)
         self.buy_order: Order = None
         self.pair: Pair = None
@@ -79,26 +77,29 @@ class NewMarketStrategyStateMachineService(StrategyStateMachineServiceAbc):
 
 
     @state
-    def watch_for_sell_signal(self):
+    def watch_order(self):
         while True:
             # TODO - ugly to have 2 function calls. Fix.
             self.bittrex.fetch_latest_tickers()
             tickers: Dict[str, Ticker] = self.bittrex.get_tickers()
             ticker: Ticker = tickers.get(self.pair.name)
-            sell_price: FinancialData = self.sell_signal(ticker)
-            if sell_price:
-                self.next_state(self.sell, sell_price)
+
+            sell_price_adjuster: FinancialData = self.sell_price_adjuster(ticker)
+            if sell_price_adjuster:
+                self.next_state(self.adjust_sell_price, sell_price_adjuster)
 
 
     @state
-    def sell(self, sell_price):
+    def adjust_sell_price(self, sell_price_adjuster):
+        # TODO - cancel previous sell order, if any
+
         quote_balance: FinancialData = self.bittrex.fetch_balances().get(self.pair.quote)
 
         sell_order = Order(**{
             'exchange_id': self.bittrex.exchange_id,
 
             'amount': quote_balance,
-            'price': sell_price,
+            'price': sell_price_adjuster,
 
             'base': self.pair.base,
             'quote': self.pair.quote,
