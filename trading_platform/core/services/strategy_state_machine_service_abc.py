@@ -1,4 +1,6 @@
+import traceback
 from abc import ABC
+from functools import wraps
 from typing import Dict, Set
 
 from sqlalchemy.orm import Session
@@ -12,20 +14,20 @@ from trading_platform.storage.daos.order_dao import OrderDao
 
 
 class StrategyStateMachineServiceAbc(ABC):
-    def __init__(self, state_machine: Dict, logger, exchanges_by_id: Dict[int, ExchangeServiceAbc],
+    def __init__(self, state: Dict, logger, exchanges_by_id: Dict[int, ExchangeServiceAbc],
                  open_order_dao: OpenOrderDao, order_dao: OrderDao):
         self.logger = logger
-        self.state_machine: Dict = state_machine
+        self.state: Dict = state
         self.exchanges_by_id: Dict[int, ExchangeServiceAbc] = exchanges_by_id
         self.order_dao = order_dao
         self.open_order_dao = open_order_dao
 
-    def state(self, f):
-        def wrapper():
-            self.logger.debug('start state {0}'.format(f.__name__))
-            f()
-            self.logger.debug('end state {0}'.format(f.__name__))
-            return wrapper
+    def next_state(self, next=None, *args, **kwargs):
+        current = self.state['current_state']
+        self.state[current]['completed'] = True
+        next = self.state[current]['success'] if next is None else next
+        self.state['current_state'] = next
+        next(*args, **kwargs)
 
     def place_orders(self, orders: Set[Order], session: Session):
         # if preload_db_state,
@@ -49,8 +51,6 @@ class StrategyStateMachineServiceAbc(ABC):
 
         return map(place_order, orders)
 
-    # @state
-    # def archive_trade(s):
     #     # RDS
     #     begin_trans()
     #     if not sql()
@@ -63,4 +63,35 @@ class StrategyStateMachineServiceAbc(ABC):
 
     # Must occur at the end of the class
     # https://stackoverflow.com/questions/3421337/accessing-a-decorator-in-a-parent-class-from-the-child-in-python
-    state = staticmethod(state)
+
+
+def state(func):
+    """
+    Decorator method for methods that occur during a state machine.
+
+    Can only be used on class or instance methods because it requires access to self.logger and self.next_state.
+    This method also depends on the class implementing the self.failure method.
+
+    Ideally this method would be a method of StateMachineServiceAbc, but I haven't figured out how to do that
+    syntax-wise.
+
+    Args:
+        func:
+
+    Returns:
+
+    """
+    def wrapper():
+        # Based on this answer, use @wraps to gain access to self
+        # https://stackoverflow.com/questions/11731136/python-class-method-decorator-with-self-arguments
+        @wraps(func)
+        def wrapped(self, *args, **kwargs):
+            try:
+                self.logger.debug('start state {0}'.format(func.__name__))
+                func(*args, **kwargs)
+                self.logger.debug('end state {0}'.format(func.__name__))
+                return wrapper
+            except Exception:
+                self.next_state(self.failure)
+
+        return wrapped

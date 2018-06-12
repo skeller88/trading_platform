@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, Optional
 
 from trading_platform.exchanges.data.balance import Balance
+from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.ticker import Ticker
 
 
@@ -57,7 +58,11 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def fetch_open_orders(self, symbol):
+    def fetch_open_orders(self, symbol) -> Dict[str, Order]:
+        pass
+
+    @abstractmethod
+    def fetch_order(self, order_id: str, symbol: str) -> Optional[Order]:
         pass
 
     ###########################################

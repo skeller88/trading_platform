@@ -21,7 +21,7 @@ from functools import reduce
 from heapq import heappush, heappop
 
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, Optional
 
 from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.deposit_destination import DepositDestination
@@ -227,8 +227,11 @@ class BacktestService(ExchangeServiceAbc):
     def fetch_closed_orders(self):
         return {}
 
-    def fetch_open_orders(self, symbol=None):
+    def fetch_open_orders(self, symbol=None) -> Dict[str, Order]:
         return {}
+
+    def fetch_order(self, order_id: str, symbol: str) -> Optional[Order]:
+        pass
 
     def buy_all(self, pair, price):
         amount = FinancialData(self.__balances[pair.base] / (price * (one + self.trade_fee)))

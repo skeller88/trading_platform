@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import ccxt
 
@@ -88,13 +88,16 @@ class GdaxLiveService(ExchangeServiceAbc):
         # return self.__client.markets.keys()
         return exchange_pairs.gdax
 
-    def fetch_open_orders(self, symbol=None):
+    def fetch_open_orders(self, symbol=None) -> Dict[str, Order]:
         order_data_list = make_api_request(
             api_request_msgs.OPEN_ORDERS_ERR.format(exchange_names.poloniex), self.__client.fetch_open_orders,
             symbol)
 
         return [Order(**order_data) for order_data in order_data_list] \
             if order_data_list is not None else []
+
+    def fetch_order(self, order_id: str, symbol: str) -> Optional[Order]:
+        pass
 
     ###########################################
     # Trading - Funding

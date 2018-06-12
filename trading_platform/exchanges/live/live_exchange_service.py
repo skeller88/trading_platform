@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import ccxt
 from ccxt import ExchangeError
@@ -132,13 +132,13 @@ class LiveExchangeService(ExchangeServiceAbc):
     def fetch_closed_orders(self, symbol=None):
         return self.__client.fetch_closed_orders(symbol)
 
-    def fetch_order(self, order_id=None, symbol=None):
+    def fetch_order(self, order_id=None, symbol=None) -> Optional[Order]:
         return self.__client.fetch_order(id=order_id, symbol=symbol)
 
     def fetch_orders(self, symbol=None):
         return self.__client.fetch_orders(symbol)
 
-    def fetch_open_orders(self, symbol=None):
+    def fetch_open_orders(self, symbol=None) -> Dict[str, Order]:
         """
 
         Args:
