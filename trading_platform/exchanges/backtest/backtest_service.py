@@ -224,7 +224,7 @@ class BacktestService(ExchangeServiceAbc):
             raise InsufficientFundsException('{0} quote needed to sell, only {1} quote available'.format(
                 amount, self.__balances[pair.quote]))
 
-    def fetch_closed_orders(self):
+    def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
         return {}
 
     def fetch_open_orders(self, symbol=None) -> Dict[str, Order]:
@@ -245,6 +245,7 @@ class BacktestService(ExchangeServiceAbc):
     ###########################################
     def get_balance(self, currency):
         total = self.__balances[currency]
+
         return Balance(currency=currency, total=total)
 
     def fetch_balances(self) -> Dict[str, Balance]:

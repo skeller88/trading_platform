@@ -14,7 +14,7 @@ from trading_platform.storage.daos.open_order_dao import OpenOrderDao
 from trading_platform.storage.daos.order_dao import OrderDao
 
 
-class NewMarketStrategyStateMachineService(StrategyStateMachineServiceAbc):
+class NewMarketStateMachineService(StrategyStateMachineServiceAbc):
     def __init__(self, logger, exchanges_by_id: Dict[int, ExchangeServiceAbc],
                  open_order_dao: OpenOrderDao, order_dao: OrderDao, sell_price: FinancialData, sell_price_adjuster: Callable):
         state: Dict = {

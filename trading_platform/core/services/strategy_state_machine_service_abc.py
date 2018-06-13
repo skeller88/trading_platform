@@ -27,7 +27,7 @@ class StrategyStateMachineServiceAbc(ABC):
         self.state[current]['completed'] = True
         next = self.state[current]['success'] if next is None else next
         self.state['current_state'] = next.__name__
-        next(*args, **kwargs)
+        return next(*args, **kwargs)
 
     def place_orders(self, orders: Set[Order], session: Session):
         # if preload_db_state,

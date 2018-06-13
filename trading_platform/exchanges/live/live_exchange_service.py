@@ -129,8 +129,8 @@ class LiveExchangeService(ExchangeServiceAbc):
             order_data['remaining'] = FinancialData(amount)
         return order_data
 
-    def fetch_closed_orders(self, symbol=None):
-        return self.__client.fetch_closed_orders(symbol)
+    def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
+        return self.__client.fetch_closed_orders(symbol, since, limit, params)
 
     def fetch_order(self, order_id=None, symbol=None) -> Optional[Order]:
         return self.__client.fetch_order(id=order_id, symbol=symbol)
@@ -310,6 +310,12 @@ class LiveExchangeService(ExchangeServiceAbc):
             currency_prop_name = 'Currency'
             free_prop_name = 'Available'
             locked_prop_name = 'Pending'
+        elif self.exchange_id == exchange_ids.gdax:
+            balances: Dict[str, Dict] = {balance.get('Currency'): {
+                'free': balance.get('Available'),
+                'pending': balance.get('Pending'),
+                'balance': balance.get('Balance')
+            } for balance in data.get('info') if balance.get('Currency') is not None}
         else:
             balances = data.get('info').get('balances')
             currency_prop_name = 'asset'

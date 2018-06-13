@@ -65,6 +65,10 @@ class ExchangeServiceAbc(ABC):
     def fetch_order(self, order_id: str, symbol: str) -> Optional[Order]:
         pass
 
+    @abstractmethod
+    def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
+        pass
+
     ###########################################
     # Trading - Funding
     ###########################################
