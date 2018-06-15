@@ -42,6 +42,13 @@ class Ticker:
         'version'
     ]
 
+    nullable_fields = [
+        'db_id',
+        'created_at',
+        'updated_at',
+        'event_time'
+    ]
+
     def __init__(self, **kwargs):
         """
         :param ask:
@@ -67,6 +74,8 @@ class Ticker:
 
         self.processing_time = kwargs.get('processing_time') if kwargs.get('processing_time') is not None else utc_timestamp()
         self.db_id = kwargs.get('db_id')
+        self.created_at = kwargs.get('created_at')
+        self.updated_at = kwargs.get('updated_at')
         self.version = kwargs.get('version')
 
     # https://stackoverflow.com/questions/390250/elegant-ways-to-support-equivalence-equality-in-python-classes

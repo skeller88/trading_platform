@@ -1,4 +1,5 @@
 import traceback
+from typing import List
 
 
 class Dao:
@@ -16,14 +17,14 @@ class Dao:
             if commit:
                 session.commit()
 
-            return session, dto.to_popo()
+            return dto.to_popo()
         except Exception as exception:
             print('rolling back due to exception')
             traceback.print_exc()
             session.rollback()
             raise exception
 
-    def bulk_save(self, session, flush=False, commit=False, popos=None):
+    def bulk_save(self, session, flush=False, commit=False, popos=None) -> List:
         try:
             dtos = [self.dto_class.from_popo(popo) for popo in popos]
             session.add_all(dtos)
@@ -34,7 +35,7 @@ class Dao:
                 session.commit()
 
             saved = [dto.to_popo() for dto in dtos]
-            return session, saved
+            return saved
         except Exception as exception:
             print('rolling back due to exception')
             traceback.print_exc()
@@ -47,30 +48,30 @@ class Dao:
             dto = session.query(self.dto_class).filter_by(db_id=db_id).first()
 
             if dto is not None:
-                return session, dto.to_popo()
+                return dto.to_popo()
 
-            return session, None
+            return None
         except Exception as exception:
             print('rolling back due to exception')
             traceback.print_exc()
             session.rollback()
             raise exception
 
-    def fetch_all(self, session):
+    def fetch_all(self, session) -> List:
         try:
             dtos = session.query(self.dto_class).all()
 
             if dtos is not None:
-                return session, list(map(lambda dto: dto.to_popo(), dtos))
+                return list(map(lambda dto: dto.to_popo(), dtos))
 
-            return session, []
+            return []
         except Exception as exception:
             print('rolling back due to exception')
             traceback.print_exc()
             session.rollback()
             raise exception
 
-    def filter_processing_time_greater_than(self, session, processing_time):
+    def filter_processing_time_greater_than(self, session, processing_time) -> List:
         try:
             dtos = session.query(self.dto_class).filter(self.dto_class.processing_time >= processing_time).order_by(self.dto_class.processing_time).all()
 
@@ -112,7 +113,7 @@ class Dao:
             raise exception
 
     # Delete
-    def delete(self, session, db_id, flush=False, commit=False):
+    def delete(self, session, db_id, flush=False, commit=False) -> int:
         try:
             deleted_count = session.query(self.dto_class).filter_by(db_id=db_id).delete()
 
@@ -121,14 +122,14 @@ class Dao:
             if commit:
                 session.commit()
 
-            return session, deleted_count
+            return deleted_count
         except Exception as exception:
             print('rolling back due to exception')
             traceback.print_exc()
             session.rollback()
             raise exception
 
-    def delete_all(self, session, flush=False, commit=False):
+    def delete_all(self, session, flush=False, commit=False) -> int:
         try:
             deleted_count = session.query(self.dto_class).delete()
 
@@ -137,7 +138,7 @@ class Dao:
             if commit:
                 session.commit()
 
-            return session, deleted_count
+            return deleted_count
         except Exception as exception:
             print('rolling back due to exception')
             traceback.print_exc()

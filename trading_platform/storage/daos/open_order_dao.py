@@ -1,6 +1,8 @@
 # TODO - DRY up this class
 import traceback
+from _ast import List
 
+from trading_platform.exchanges.data.order import Order
 from trading_platform.storage.daos.dao import Dao
 from trading_platform.storage.sql_alchemy_dtos.sql_alchemy_open_order_dto import SqlAlchemyOpenOrderDto
 
@@ -16,7 +18,7 @@ class OpenOrderDao(Dao):
             if dtos is not None:
                 return list(map(lambda dto: dto.to_popo(), dtos))
 
-            return session, None
+            return []
         except Exception as exception:
             print('rolling back due to exception')
             traceback.print_exc()

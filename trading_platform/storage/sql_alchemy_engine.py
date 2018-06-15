@@ -9,7 +9,7 @@ abstract class.
 """
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker, scoped_session, Session
 
 from trading_platform.properties.env_properties import EnvProperties, Database
 from trading_platform.storage.sql_alchemy_dtos import table_classes
@@ -33,10 +33,10 @@ class SqlAlchemyEngine:
         self.debug = EnvProperties.debug
         print_if_debug_enabled(self.debug, 'connecting to database at {0} on port {1}'.format(host, port))
         self.sql_alchemy_engine = create_engine(self.connection_string, echo=debug, **kwargs)
-        # sqlalchemy's API is confusingly named. Call session_maker_instance to create a Session instance. Then Session is called
-        # to create thread-local session instances.
+        # sqlalchemy's API is confusingly named. Call session_maker_instance to create a Session instance. Then Session
+        # is called to create thread-local session instances.
         # http://docs.sqlalchemy.org/en/latest/orm/session_api.html#sqlalchemy.orm.session.Session
-        session_maker_instance = sessionmaker(bind=self.sql_alchemy_engine, autocommit=False, autoflush=False)
+        session_maker_instance: Session = sessionmaker(bind=self.sql_alchemy_engine, autocommit=False, autoflush=False)
         self.scoped_session_maker = scoped_session(session_maker_instance)
         self.base = Base
 

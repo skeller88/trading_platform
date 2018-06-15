@@ -76,7 +76,7 @@ class Order:
         'exchange_id',
         'quote',
         'base',
-        'order_type',
+        'order_side',
         'price',
         'amount'
     ]

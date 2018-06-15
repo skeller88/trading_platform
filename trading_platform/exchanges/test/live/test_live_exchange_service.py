@@ -24,7 +24,7 @@ from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
 
 
 class TestLiveExchangeService(unittest.TestCase):
-    __test__ = True  # important, makes sure tests are not run on base class
+    __test__ = False  # important, makes sure tests are not run on base class
     # Each inheritor of this class will set these values
     live_service_class = BinanceLiveService
     xrp_tag_len = None

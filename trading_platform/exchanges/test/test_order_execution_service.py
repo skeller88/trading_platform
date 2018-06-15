@@ -1,6 +1,7 @@
 import unittest
 from copy import copy
 from logging import Logger
+from time import sleep
 from typing import Dict, Set, List
 
 from nose.tools import eq_, assert_greater
@@ -37,7 +38,7 @@ class TestOrderExecutionService(unittest.TestCase):
         cls.quote_amount = FinancialData(5)
         cls.quote_price = FinancialData(2)
 
-        cls.base_order: Order = Order(**{
+        cls.base_order_kwargs: Dict = {
             # app metadata
             'processing_time': cls.processing_time,
             'version': Order.current_version,
@@ -55,7 +56,7 @@ class TestOrderExecutionService(unittest.TestCase):
 
             'amount': cls.quote_amount,
             'price': cls.quote_price
-        })
+        }
 
     def setUp(self):
         self.backtest_services: Dict[id, BacktestService] = backtest_subclasses.instantiate()
@@ -77,16 +78,18 @@ class TestOrderExecutionService(unittest.TestCase):
         # multiple by two to make sure there's enough base
         self.bittrex.deposit_immediately(self.base, self.quote_amount * self.quote_price * two)
 
-        buy_order: Order = copy(self.base_order)
-        buy_order.order_side = OrderSide.buy
+        buy_order_kwargs: Dict = copy(self.base_order_kwargs)
+        buy_order_kwargs['order_side'] = OrderSide.buy
+        buy_order = Order(**buy_order_kwargs)
         self.execute_order(buy_order, True)
 
     def test_execute_buy_order_write_pending(self):
         # multiple by two to make sure there's enough base
         self.bittrex.deposit_immediately(self.base, self.quote_amount * self.quote_price * two)
 
-        buy_order: Order = copy(self.base_order)
-        buy_order.order_side = OrderSide.buy
+        buy_order_kwargs: Dict = copy(self.base_order_kwargs)
+        buy_order_kwargs['order_side'] = OrderSide.buy
+        buy_order = Order(**buy_order_kwargs)
         self.execute_order(buy_order, False)
 
     def test_execute_sell_order_write_pending(self):
@@ -95,8 +98,10 @@ class TestOrderExecutionService(unittest.TestCase):
             'USDT': FinancialData(1)
         })
         self.bittrex.set_buy_price('{0}_{1}'.format(self.quote, self.base), self.quote_price)
-        sell_order: Order = copy(self.base_order)
-        sell_order.order_side = OrderSide.sell
+
+        sell_order_kwargs: Dict = copy(self.base_order_kwargs)
+        sell_order_kwargs['order_side'] = OrderSide.sell
+        sell_order: Order = Order(**sell_order_kwargs)
         self.execute_order(sell_order, True)
 
     def test_execute_sell_order(self):
@@ -105,11 +110,26 @@ class TestOrderExecutionService(unittest.TestCase):
             'USDT': FinancialData(1)
         })
         self.bittrex.set_buy_price('{0}_{1}'.format(self.quote, self.base), self.quote_price)
-        sell_order: Order = copy(self.base_order)
-        sell_order.order_side = OrderSide.sell
+
+        sell_order_kwargs: Dict = copy(self.base_order_kwargs)
+        sell_order_kwargs['order_side'] = OrderSide.sell
+        sell_order: Order = Order(**sell_order_kwargs)
         self.execute_order(sell_order, False)
 
+    @unittest.skip('This test fails because the session gets closed unexpectedly. Figure out why.')
+    # I would expect this test to pass because I'm using scoped sessions.
+    # https://stackoverflow.com/questions/6297404/multi-threaded-use-of-sqlalchemy
+    def test_execute_orders_multithreaded(self):
+        self.execute_orders(True)
+
     def test_execute_orders(self):
+        self.execute_orders(False)
+
+    def execute_orders(self, multithreaded):
+        self.order_execution_service: OrderExecutionService = OrderExecutionService(
+            logger=self.logger, order_dao=self.order_dao, exchanges_by_id=self.backtest_services,
+            multithreaded=multithreaded)
+
         # multiple by two to make sure there's enough base
         self.bittrex.deposit_immediately(self.base, self.quote_amount * self.quote_price * two)
         self.bittrex.deposit_immediately(self.quote, self.quote_amount)
@@ -118,19 +138,37 @@ class TestOrderExecutionService(unittest.TestCase):
             'USDT': FinancialData(1)
         })
 
-        buy_order: Order = copy(self.base_order)
-        buy_order.order_side = OrderSide.buy
+        buy_order_kwargs: Dict = copy(self.base_order_kwargs)
+        buy_order_kwargs['order_side'] = OrderSide.buy
+        buy_order = Order(**buy_order_kwargs)
 
-        sell_order: Order = copy(self.base_order)
-        sell_order.order_side = OrderSide.sell
+        sell_order_kwargs: Dict = copy(self.base_order_kwargs)
+        sell_order_kwargs['order_side'] = OrderSide.sell
+        sell_order: Order = Order(**sell_order_kwargs)
 
         order_set: Set[Order] = {buy_order, sell_order}
-        self.order_execution_service.execute_order_set(order_set, self.session, write_pending_order=True)
+        executed_orders: Dict[str, Order] = self.order_execution_service.execute_order_set(order_set, self.session,
+                                                                                           write_pending_order=True)
+        eq_(len(executed_orders.values()), len(order_set))
+        session, orders = self.order_dao.fetch_all(self.session)
+        # eq_(len(self.order_dao.fetch_all(self.session)), len(order_set) * 2)
+
+        # Wait for writes to happen to the database. TODO - use a callback instead
+        if multithreaded:
+            sleep(2)
+
+        for order in order_set:
+            order_from_db = self.order_dao.fetch_latest_with_order_id(order_id=order.order_id,
+                                                                           session=self.session)
+            eq_(order_from_db.order_status, OrderStatus.open)
+            eq_ignore_certain_fields(order_from_db, executed_orders.get(order.order_id), fields_to_ignore=[
+                'db_id',
+                'created_at',
+            ])
 
     def execute_order(self, order: Order, write_pending_order=True):
         order_executed: Order = self.order_execution_service.execute_order(order, self.session,
                                                                            write_pending_order=write_pending_order)
-
         # compare order with order returned from exchange
         eq_ignore_certain_fields(order_executed, order, fields_to_ignore=[
             'processing_time',
@@ -149,12 +187,12 @@ class TestOrderExecutionService(unittest.TestCase):
         eq_(len(orders), num_orders_written)
         actual_order_statuses: List[OrderStatus] = list(map(lambda x: x.order_status, orders))
         for order_status in expected_order_statuses:
-            assert(order_status in actual_order_statuses)
+            assert (order_status in actual_order_statuses)
 
         open_order_from_db = self.order_dao.fetch_latest_with_order_id(order_id=order.order_id, session=self.session)
         eq_ignore_certain_fields(open_order_from_db, order_executed, fields_to_ignore=[
             'db_id',
             'created_at',
         ])
-        assert(open_order_from_db.db_id is not None)
-        assert(open_order_from_db.created_at is not None)
+        assert (open_order_from_db.db_id is not None)
+        assert (open_order_from_db.created_at is not None)

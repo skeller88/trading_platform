@@ -24,13 +24,14 @@ class OrderExecutionService:
         if multithreaded:
             self.thread_pool_executer = ThreadPoolExecutor(max_workers=10)
 
-    def execute_order_set(self, orders: Set[Order], session: Session, write_pending_order: bool) -> List[Order]:
+    def execute_order_set(self, orders: Set[Order], session: Session, write_pending_order: bool) -> Dict[str, Order]:
         def execute_order_with_session(order) -> Order:
             return self.execute_order(order, session, write_pending_order)
 
         order_execution_attempts: Iterable[Order] = map(execute_order_with_session, orders)
         executed_orders: Iterable[Order] = filter(lambda order: order is not None, order_execution_attempts)
-        return list(executed_orders)
+        order_dict = {order.order_id: order for order in executed_orders}
+        return order_dict
 
     def execute_order(self, order: Order, session: Session, write_pending_order: bool) -> Order:
         exchange = self.exchanges_by_id.get(order.exchange_id)

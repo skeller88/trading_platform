@@ -1,6 +1,8 @@
 # TODO - DRY up this class
 import traceback
+from typing import Optional, List
 
+from trading_platform.exchanges.data.order import Order
 from trading_platform.storage.daos.dao import Dao
 from trading_platform.storage.sql_alchemy_dtos.sql_alchemy_order_dto import SqlAlchemyOrderDto
 
@@ -9,7 +11,7 @@ class OrderDao(Dao):
     def __init__(self):
         super().__init__(dto_class=SqlAlchemyOrderDto)
 
-    def fetch_earliest_with_order_id(self, session, order_id):
+    def fetch_earliest_with_order_id(self, session, order_id) -> Optional[Order]:
         """
         Fetch the order with the earliest processing_time.
         Args:
@@ -33,7 +35,7 @@ class OrderDao(Dao):
             session.rollback()
             raise exception
 
-    def fetch_latest_with_order_id(self, session, order_id):
+    def fetch_latest_with_order_id(self, session, order_id) -> Optional[Order]:
         """
         Fetch the order with the most recent/latest processing_time. Only used in testing for now to check
         updated Order state after an arbitrage step.
@@ -58,7 +60,7 @@ class OrderDao(Dao):
             session.rollback()
             raise exception
 
-    def fetch_by_order_id(self, session, order_id):
+    def fetch_by_order_id(self, session, order_id) -> List:
         try:
             dtos = session.query(self.dto_class).filter_by(order_id=order_id).all()
 
