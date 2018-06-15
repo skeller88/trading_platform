@@ -5,7 +5,7 @@ exchange balances across two exchanges, the high and the low exchange.
 import pandas
 
 from trading_platform.exchanges.data.financial_data import FinancialData, zero, one_hundred
-from trading_platform.exchanges.backtest.backtest_service import BacktestService
+from trading_platform.exchanges.backtest.backtest_service import BacktestExchangeService
 
 
 class BacktestProfitService:
@@ -87,23 +87,23 @@ class BacktestProfitService:
         Returns:
 
         """
-        start_balance_value = BacktestService.total_usdt_value(start_balance, self.initial_tickers)
+        start_balance_value = BacktestExchangeService.total_usdt_value(start_balance, self.initial_tickers)
 
         # I'm not the biggest fan of this line. Ideally it would be self.profit_history[len(self.profit_history) - 1],
         # but he.capital_gains and le.capital_gains reflect the current state of the exchange. And the last element
         # in self.profit_history may not match that. So this approach seemed like the lesser of two evils. Make sure to call .alpha() right after
         # .create_balance_snapshot(), or visa versa. Otherwise the alpha may not match the balance snapshot.
         end_balance = self.balances_across_exchanges()
-        end_balance_value = BacktestService.total_usdt_value(end_balance, end_tickers)
+        end_balance_value = BacktestExchangeService.total_usdt_value(end_balance, end_tickers)
         gross_profits = end_balance_value - start_balance_value
         # Due to the wash sale rule, can't deduct capital losses. We could refine the strategy to sell everything at the
         # end of the year and realize capital losses, but that's not implemented for now. Let's see if strategy is profitable
         # without that strategy.
         capital_gains = BacktestProfitService.merge_and_sum_dicts(self.he.capital_gains, self.le.capital_gains)
-        taxes = max(BacktestService.total_usdt_value(capital_gains, end_tickers), 0) * self.income_tax
+        taxes = max(BacktestExchangeService.total_usdt_value(capital_gains, end_tickers), 0) * self.income_tax
         net_profits = gross_profits - taxes
 
-        end_bh_balance_value = BacktestService.total_usdt_value(start_balance, end_tickers)
+        end_bh_balance_value = BacktestExchangeService.total_usdt_value(start_balance, end_tickers)
         # unlike when calculating arg_gross_profits, compute unrealized profits if the balances were to be liquidated
         bh_gross_profits = end_bh_balance_value - start_balance_value
         bh_taxes = max(bh_gross_profits, 0) * self.ltcg_tax
@@ -114,7 +114,7 @@ class BacktestProfitService:
     def rates_of_return(self, end_tickers):
         start_balance = self.profit_snapshots[0]['balances']
         profits, bh_profits = self.net_profits(start_balance, end_tickers)
-        start_balance_usdt_value = BacktestService.total_usdt_value(start_balance, self.initial_tickers)
+        start_balance_usdt_value = BacktestExchangeService.total_usdt_value(start_balance, self.initial_tickers)
         strat_return = profits / start_balance_usdt_value * one_hundred
         bh_return = bh_profits / start_balance_usdt_value * one_hundred
         return strat_return, bh_return

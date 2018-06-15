@@ -14,6 +14,7 @@ from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
 from trading_platform.exchanges.data.enums.order_type import OrderType
 from trading_platform.exchanges.data.financial_data import zero, FinancialData, one
+from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.utils import check_required_fields
 from trading_platform.exchanges.live.binance_live_service import BinanceLiveService
 from trading_platform.core.test import data
@@ -46,7 +47,18 @@ class TestBinanceLiveService(TestLiveExchangeService):
         # Only Bittrex has a ETH balance, so no sell order is placed.
         # TODO - place sell order
         buy_amount = data.minimum_usdt_balance / quote_buy_price
-        buy_order = self.service.create_limit_buy_order(order=quote_buy_price)
+
+        order: Order = Order(**{
+            'amount': buy_amount,
+            'price': quote_buy_price,
+
+            'base': self.pair.base,
+            'quote': self.pair.quote,
+
+            'exchange_id': self.service.exchange_id,
+            'order_side': OrderSide.buy
+        })
+        buy_order = self.service.create_limit_buy_order(order=order)
 
         try:
             # unlike in the case of bittrex, the binance response populates these values. The response

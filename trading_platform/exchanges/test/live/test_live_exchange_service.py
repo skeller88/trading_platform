@@ -12,6 +12,7 @@ import pandas
 from nose.tools import eq_, assert_true, assert_greater
 
 from trading_platform.core.test.data import Defaults
+from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.financial_data import zero
 from trading_platform.exchanges.data.pair import Pair
@@ -78,11 +79,12 @@ class TestLiveExchangeService(unittest.TestCase):
         eq_(len(deposit_destination.tag), self.xrp_tag_len)
 
     def test_fetch_balances(self):
-        eq_(self.service.get_balance(self.pair.base), zero)
+        balance: Balance = self.service.get_balance(self.pair.base)
+        eq_(balance.free, zero)
         self.service.fetch_balances()
-        base_balance = self.service.get_balance(self.pair.base)
-        assert_true(base_balance)
-        assert_greater(base_balance, zero)
+        base_balance: Balance = self.service.get_balance(self.pair.base)
+        assert (base_balance is not None)
+        assert_greater(base_balance.free, zero)
 
     ###########################################
     # Market state

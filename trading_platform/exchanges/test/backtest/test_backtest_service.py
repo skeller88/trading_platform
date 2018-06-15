@@ -1,5 +1,5 @@
 """
-nosetests test.services.exchange.backtest.test_backtest_service.TestBacktestService --nocapture
+nosetests test.services.exchange.backtest.test_backtest_service.TestBacktestExchangeService --nocapture
 """
 import datetime
 import unittest
@@ -18,7 +18,7 @@ from trading_platform.exchanges.data.pair import Pair
 from trading_platform.utils.exceptions import InsufficientFundsException
 
 
-class TestBacktestService(unittest.TestCase):
+class TestBacktestExchangeService(unittest.TestCase):
     def setUp(self):
         self.pair = Pair(base='ETH', quote='ARK')
         self.base = self.pair.base
@@ -86,7 +86,7 @@ class TestBacktestService(unittest.TestCase):
         eq_(self.te.get_balance(self.base).total,
             self.initial_base_capital - quote_amount_to_buy * new_price * (one + self.te.trade_fee))
 
-    @unittest.skip('BacktestService.below_min_base_order_value() not implemented yet.')
+    @unittest.skip('BacktestExchangeService.below_min_base_order_value() not implemented yet.')
     def test_buy_min_base_order_value(self):
         quote_amount_to_buy = one
         prev_wallet_quote = self.te.get_balance(self.quote).total
@@ -99,7 +99,7 @@ class TestBacktestService(unittest.TestCase):
         eq_(self.te.get_balance(self.base).total,
             self.initial_base_capital - quote_amount_to_buy * new_price * (one + self.te.trade_fee))
 
-    @unittest.skip('BacktestService.below_min_base_order_value() not implemented yet.')
+    @unittest.skip('BacktestExchangeService.below_min_base_order_value() not implemented yet.')
     def test_buy_below_min_base_order_value(self):
         quote_amount_to_buy = one
         prev_wallet_quote = self.te.get_balance(self.quote).total
@@ -204,7 +204,7 @@ class TestBacktestService(unittest.TestCase):
         eq_(self.te.capital_losses, abs(sell_price - buy_price) * sell_order_executed.amount * self.te.usdt_tickers[self.base])
         assert_greater(self.te.capital_losses, 0)
 
-    @unittest.skip('BacktestService.below_min_base_order_value() not implemented yet.')
+    @unittest.skip('BacktestExchangeService.below_min_base_order_value() not implemented yet.')
     def test_sell_min_base_order_value(self):
         prev_wallet_base = self.te.get_balance(self.base).total
         prev_wallet_quote = self.te.get_balance(self.quote).total
@@ -220,7 +220,7 @@ class TestBacktestService(unittest.TestCase):
         assert (self.te.capital_losses == quote_to_sell * abs(sell_price - buy_price))
         assert (self.te.capital_losses > 0)
 
-    @unittest.skip('BacktestService.below_min_base_order_value() not implemented yet.')
+    @unittest.skip('BacktestExchangeService.below_min_base_order_value() not implemented yet.')
     def test_sell_below_min_base_order_value(self):
         prev_wallet_base = self.te.get_balance(self.base).total
         prev_wallet_quote = self.te.get_balance(self.quote).total

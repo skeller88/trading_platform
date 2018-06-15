@@ -266,6 +266,9 @@ class Order:
         overwritten by the values in order_data. This method exists because the data returned from
         an exchange for a given Order may be different from the values of an Order instance.
 
+        There are some differences in exchange create limit order responses.
+        - Binance sets the "filled" and "remaining" fields. Bittrex doesn't.
+
         Args:
             order_data:
 

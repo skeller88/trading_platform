@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import ccxt
 from ccxt import ExchangeError
@@ -45,7 +45,7 @@ class LiveExchangeService(ExchangeServiceAbc):
     # Trading - Orders
     ###########################################
 
-    def cancel_order(self, exchange_order_id, pair):
+    def cancel_order(self, exchange_order_id, pair) -> Order:
         """
         :param exchange_order_id: str
         :param pair: Pair
@@ -67,12 +67,12 @@ class LiveExchangeService(ExchangeServiceAbc):
 
         raise Exception('Order was not cancelled', response)
 
-    def create_limit_buy_order(self, order, params=None) -> Optional[Order]:
+    def create_limit_buy_order(self, order, params={}) -> Optional[Order]:
         if order.order_side != OrderSide.buy:
             raise Exception('OrderSide != OrderSide.buy')
         return self.create_limit_order(order, **params)
 
-    def create_limit_sell_order(self, order, params=None) -> Optional[Order]:
+    def create_limit_sell_order(self, order, params={}) -> Optional[Order]:
         if order.order_side != OrderSide.sell:
             raise Exception('OrderSide != OrderSide.sell')
         return self.create_limit_order(order, **params)
@@ -88,41 +88,15 @@ class LiveExchangeService(ExchangeServiceAbc):
 
         pair: Pair = Pair(base=order.base, quote=order.quote)
 
-        self.__client.verbose = True
         limit_order_method = self.__client.create_limit_buy_order if order.order_side == OrderSide.buy else self.__client.create_limit_sell_order
         response = make_api_limit_order_request(limit_order_method, pair.name_for_exchange_clients, amount,
                                                 price, params)
-        self.__client.verbose = False
 
         if response is None:
             return
 
         order_copy: Order = order.copy_updated_with_exchange_data(response)
         return order_copy
-
-    def add_missing_create_limit_order_fields(self, pair, price, amount, order_data):
-        """
-        Bittrex doesn't return certain fields with the create_limit_*_order response,
-        so populate them so that the order data is saved.
-        Args:
-            order_data dict: order data
-            pair:
-            price:
-            amount:
-
-        Returns:
-
-        """
-        order_data['amount'] = order_data.get('amount') if order_data.get('amount') is not None else FinancialData(
-            amount)
-        order_data['price'] = order_data.get('price') if order_data.get('price') is not None else FinancialData(price)
-
-        # Binance sets the following fields. Bittrex doesn't.
-        if self.exchange_id == exchange_ids.bittrex:
-            # Bittrex doesn't return this data, so assume 0
-            order_data['filled'] = zero
-            order_data['remaining'] = FinancialData(amount)
-        return order_data
 
     def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
         return self.__client.fetch_closed_orders(symbol, since, limit, params)
@@ -162,13 +136,13 @@ class LiveExchangeService(ExchangeServiceAbc):
 
         return self.__open_orders
 
-    def get_open_order(self, order_id):
+    def get_open_order(self, order_id) -> Optional[Order]:
         return self.__open_orders.get(order_id)
 
     ###########################################
     # Account State
     ###########################################
-    def convert_currency_withdrawal_fee(self, currency_to_convert, price_of_target_currency):
+    def convert_currency_withdrawal_fee(self, currency_to_convert, price_of_target_currency) -> FinancialData:
         """
         Convert one currency withdrawal to its value in another currency.
 
@@ -185,7 +159,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         """
         return self.withdrawal_fee_for_currency(currency_to_convert) / price_of_target_currency
 
-    def currency_sale_value_post_fees(self, quote, base, quote_price):
+    def currency_sale_value_post_fees(self, quote, base, quote_price) -> FinancialData:
         """
         Value, in quote, of the base that would be gained from selling all of the quote, after trading and
         base withdrawal fees. The reason for this method is to calculate which exchange has the limiting amount of
@@ -205,7 +179,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         # the "quote_price" variable cancels out mathematically
         return self.get_balance(quote) / (one + self.trade_fee) - base_withdrawal_fee_in_quote
 
-    def currency_purchased_value_post_fees(self, currency, currency_price, base_amount):
+    def currency_purchased_value_post_fees(self, currency, currency_price, base_amount) -> FinancialData:
         """
         How much currency the exchange could buy and withdraw after trade and withdrawal fees
         Args:
@@ -216,7 +190,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         return base_amount / (currency_price * (one + self.trade_fee)) - self.withdrawal_fee_for_currency(
             currency)
 
-    def withdrawal_fee_for_currency(self, currency):
+    def withdrawal_fee_for_currency(self, currency) -> FinancialData:
         currency = standardizers.currency(currency)
         # values in dataframe are in float type, which is not compatible with the FinancialData type (Decimal)
         if currency.upper() in self.__withdrawal_fees.index:
@@ -230,7 +204,7 @@ class LiveExchangeService(ExchangeServiceAbc):
     # Trading - Funding
     ###########################################
 
-    def fetch_deposit_destination(self, currency, params={}):
+    def fetch_deposit_destination(self, currency, params={}) -> DepositDestination:
         try:
             response = self.__client.fetch_deposit_address(currency)
             # Make 'status' parameter consistent across exchanges.
@@ -277,7 +251,7 @@ class LiveExchangeService(ExchangeServiceAbc):
     # Account state
     ###########################################
 
-    def get_balance(self, currency) -> Optional[Balance]:
+    def get_balance(self, currency) -> Balance:
         """
          Returns free balance from balances data structure. Does not cause a HTTP request so the Balance returned
          may be outdated.
@@ -286,7 +260,8 @@ class LiveExchangeService(ExchangeServiceAbc):
 
          Returns FinancialData: currency balance free to trade
          """
-        return self.__balances.get(currency)
+        balance: Balance = self.__balances.get(currency)
+        return balance if balance is not None else Balance.instance_with_zero_value_fields()
 
     def fetch_balances(self) -> Dict[str, Balance]:
         """
@@ -349,7 +324,7 @@ class LiveExchangeService(ExchangeServiceAbc):
     ###########################################
     # Market state
     ###########################################
-    def fetch_market_symbols(self):
+    def fetch_market_symbols(self) -> List[str]:
         """
         fetch_markets.py was used to get a list of pairs for each exchange, and those lists were manually copied into
         the subclass implementations of this method.
@@ -357,7 +332,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         """
         return exchange_pairs.all_exchanges.get(self.exchange_id)
 
-    def fetch_latest_tickers(self):
+    def fetch_latest_tickers(self) -> List[Ticker]:
         tickers = make_api_request(self.__client.fetch_tickers)
 
         if tickers is None:
@@ -376,13 +351,13 @@ class LiveExchangeService(ExchangeServiceAbc):
     def get_tickers(self) -> Dict[str, Ticker]:
         return self.__tickers
 
-    def get_ticker(self, pair_name):
+    def get_ticker(self, pair_name) -> Optional[Ticker]:
         return self.__tickers.get(pair_name)
 
     def fetch_order_book(self, symbol, limit=None, params={}):
         return self.__client.fetch_order_book(symbol=symbol, limit=limit, params=params)
 
-    def load_markets(self):
+    def load_markets(self) -> List:
         return self.__client.load_markets()
 
     @staticmethod

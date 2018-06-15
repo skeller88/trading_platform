@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Dict, Optional
 
 from trading_platform.exchanges.data.balance import Balance
+from trading_platform.exchanges.data.deposit_destination import DepositDestination
 from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.ticker import Ticker
 
@@ -27,7 +28,7 @@ class ExchangeServiceAbc(ABC):
     ###########################################
 
     @abstractmethod
-    def cancel_order(self, exchange_order_id, pair):
+    def cancel_order(self, exchange_order_id, pair) -> Order:
         """
         :param exchange_order_id: str
         :param pair: Pair
@@ -36,7 +37,7 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def create_limit_buy_order(self, order, params=None):
+    def create_limit_buy_order(self, order, params=None) -> Order:
         """
         :param pair: Pair
         :param amount: float
@@ -48,7 +49,7 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def create_limit_sell_order(self, order, params=None):
+    def create_limit_sell_order(self, order, params=None) -> Order:
         """
         :param pair: Pair
         :param amount: float
@@ -76,7 +77,7 @@ class ExchangeServiceAbc(ABC):
     ###########################################
 
     @abstractmethod
-    def fetch_deposit_destination(self, currency, params):
+    def fetch_deposit_destination(self, currency, params) -> DepositDestination:
         """
         https://github.com/ccxt/ccxt/wiki/Manual#deposit
         Args:
@@ -127,7 +128,7 @@ class ExchangeServiceAbc(ABC):
     ###########################################
 
     @abstractmethod
-    def get_balance(self, currency) -> Optional[Balance]:
+    def get_balance(self, currency) -> Balance:
         pass
 
     @abstractmethod

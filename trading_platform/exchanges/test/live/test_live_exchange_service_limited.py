@@ -45,6 +45,6 @@ class TestLiveExchangeServiceLimited(unittest.TestCase):
 
     def test_load_markets(self):
         if self.service.exchange_id == exchange_ids.gdax:
-            assert_greater(self.service.load_markets(), 10)
+            assert_greater(len(self.service.load_markets()), 10)
         else:
-            assert_greater(self.service.load_markets(), 200)
+            assert_greater(len(self.service.load_markets()), 50)

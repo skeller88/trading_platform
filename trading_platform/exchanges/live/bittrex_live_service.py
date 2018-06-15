@@ -9,7 +9,6 @@ from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.live.live_exchange_service import LiveExchangeService
 
 # Markets
-from trading_platform.utils.http_utils import make_api_limit_order_request, make_api_request
 
 MARKETS = [
     'USDT-BTC',

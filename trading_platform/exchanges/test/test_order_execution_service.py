@@ -9,7 +9,7 @@ from nose.tools import eq_, assert_greater
 from trading_platform.core.services.logging_service import LoggingService
 from trading_platform.core.test.util_methods import eq_ignore_certain_fields
 from trading_platform.exchanges.backtest import backtest_subclasses
-from trading_platform.exchanges.backtest.backtest_service import BacktestService
+from trading_platform.exchanges.backtest.backtest_exchange_service import BacktestExchangeService
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
@@ -59,7 +59,7 @@ class TestOrderExecutionService(unittest.TestCase):
         }
 
     def setUp(self):
-        self.backtest_services: Dict[id, BacktestService] = backtest_subclasses.instantiate()
+        self.backtest_services: Dict[id, BacktestExchangeService] = backtest_subclasses.instantiate()
         self.bittrex = self.backtest_services[exchange_ids.bittrex]
         self.order_execution_service: OrderExecutionService = OrderExecutionService(
             logger=self.logger, order_dao=self.order_dao, exchanges_by_id=self.backtest_services,

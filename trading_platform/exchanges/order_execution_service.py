@@ -1,15 +1,13 @@
 from concurrent.futures import ThreadPoolExecutor
 from logging import Logger
-from typing import Dict, Set, List, Iterable
+from typing import Dict, Set, Iterable
 
 from sqlalchemy.orm import Session
 
 from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
 from trading_platform.exchanges.data.order import Order
-from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
-
 from trading_platform.storage.daos.order_dao import OrderDao
 
 
@@ -60,7 +58,6 @@ class OrderExecutionService:
 
             return executed_order
         except Exception as ex:
-            raise ex
             self.logger.error(ex)
 
     def cancel_order(self, order: Order):

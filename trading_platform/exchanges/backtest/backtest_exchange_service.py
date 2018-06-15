@@ -1,5 +1,5 @@
 """
-Exchange services that are composed of a BacktestService instance are used in backtests.
+Exchange services that are composed of a BacktestExchangeService instance are used in backtests.
 
 This class uses in-memory data structures to maintain exchange balance and order state, while stub exchange operations
 such as buying, selling, and fetching balances. That way, the live exchange can be mocked.
@@ -10,7 +10,7 @@ with respect to a single base currency. This seems fine for now because historic
 So backtests could be run on different base currencies simultaneously.
 
 The class is used in other ExchangeServiceAbc classes via the composition/delegation/proxy pattern. There's a lot of different names for
-this pattern, but the idea is that any class that is composed of an instance of the BacktestService class will delegate certain
+this pattern, but the idea is that any class that is composed of an instance of the BacktestExchangeService class will delegate certain
 methods to that class. There's debate about whether multiple composition is better than multiple inheritance. My initial
 opinion is that multiple composition is more flexible and a bit easier to reason about:
 See an example here http://python-3-patterns-idioms-test.readthedocs.io/en/latest/Fronting.html
@@ -267,11 +267,11 @@ class BacktestExchangeService(ExchangeServiceAbc):
     ###########################################
     # Account state
     ###########################################
-    def get_balance(self, currency) -> Optional[Balance]:
-        total = self.__balances[currency]
+    def get_balance(self, currency) -> Balance:
+        total: FinancialData = self.__balances[currency]
 
-        if total is not None:
-            return Balance(currency=currency, total=total, free=total, locked=zero)
+        return Balance(currency=currency, total=total, free=total,
+                       locked=zero) if total is not None else Balance.instance_with_zero_value_fields()
 
     def fetch_balances(self) -> Dict[str, Balance]:
         """
@@ -317,6 +317,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
         Returns FinancialData:
 
         """
+
         def usdt_value(total_usdt_value, currency):
             usdt_pair = Pair(base='USDT', quote=currency)
             currency_usdt_price = end_tickers.get(usdt_pair.name)
@@ -516,7 +517,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
             currency:
             amount (FinancialData): amount of currency to withdraw. Withdrawal fees are subtracted from amount, so the actual amount
                 withdrawn will be less.
-            dest_exchange: reference to an exchange composed of BacktestService. The dictionary has to be passed by reference
+            dest_exchange: reference to an exchange composed of BacktestExchangeService. The dictionary has to be passed by reference
                 in order for the balance to be properly updated. It's not the best naming because ideally this parameter
                 would be named "balances", not "address_or_dest_exchange". but the interface needs to be compatible with that of a live
                 exchange.

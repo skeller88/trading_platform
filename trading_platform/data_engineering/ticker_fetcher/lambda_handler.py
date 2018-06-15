@@ -7,6 +7,7 @@ import time
 
 # Append the directory that is running this script. Otherwise 'core' module won't be discoverable because
 # the 'core' module isn't added to the sys.path
+
 sys.path.append(os.getcwd())
 sys.path.append(os.getcwd().replace('ticker_fetcher', ''))
 from trading_platform.exchanges.live import live_subclasses

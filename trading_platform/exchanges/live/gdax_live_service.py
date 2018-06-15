@@ -1,3 +1,5 @@
+from typing import List, Dict, Optional
+
 import ccxt
 
 from trading_platform.exchanges.data.enums import exchange_names, exchange_ids
@@ -41,6 +43,7 @@ class GdaxLiveService():
                                                            secret,
                                                            trade_fee=FinancialData(.0025),
                                                            withdrawal_fees=withdrawal_fees)
+        self.__tickers = {}
 
     def __getattr__(self, name):
         return getattr(self.__live_exchange_service, name)
@@ -49,7 +52,7 @@ class GdaxLiveService():
     # Market state
     ###########################################
 
-    def fetch_latest_tickers(self):
+    def fetch_latest_tickers(self) -> List[Ticker]:
         """
         "ticker" gets updated by multiple threads. Built in types are inherently thread-safe:
         https://docs.python.org/3/glossary.html#term-global-interpreter-lock
@@ -60,7 +63,7 @@ class GdaxLiveService():
         Returns list<Ticker>:
         """
         self.__tickers = {}
-        tickers = []
+        tickers: List[Ticker] = []
         for market in MARKETS:
             ticker = self.fetch_ticker(market)
             if ticker is None or ticker.base is None or ticker.quote is None:
@@ -74,7 +77,7 @@ class GdaxLiveService():
         pass
 
     def fetch_ticker(self, market):
-        ticker = make_api_request(self.__client.fetch_ticker, market)
+        ticker = make_api_request(self.client.fetch_ticker, market)
 
         pair_name, ticker_instance = Ticker.from_exchange_data(ticker, self.exchange_id, Ticker.current_version)
         if ticker_instance is None:
@@ -82,8 +85,21 @@ class GdaxLiveService():
 
         return ticker_instance
 
+    def get_tickers(self) -> Dict[str, Ticker]:
+        """
+        LiveExchangeService implements this function, but since GdaxLiveService is implementing fetch_tickers,
+        it won't have access to LiveExchangeService.__tickers.
+
+        Returns:
+
+        """
+        return self.__tickers
+
+    def get_ticker(self, pair_name) -> Optional[Ticker]:
+        return self.__tickers.get(pair_name)
+
     def fetch_order_book(self, symbol, limit=None, params={}):
-        return self.__client.fetch_order_book(symbol=symbol, limit=limit, params=params)
+        return self.order_book(symbol=symbol, limit=limit, params=params)
 
     def order_book(self, product_id, level=1):
         """

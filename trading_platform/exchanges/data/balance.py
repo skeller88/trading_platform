@@ -1,3 +1,6 @@
+from trading_platform.exchanges.data.financial_data import zero
+
+
 class Balance:
     """
     Balance of a particular asset on an exchange.
@@ -51,6 +54,16 @@ class Balance:
     def __hash__(self):
         """Overrides the default implementation"""
         return hash(tuple(sorted(self.__dict__.items())))
+
+    @classmethod
+    def instance_with_zero_value_fields(cls):
+        """
+        Instead of returning None, return a Balance instance with zero value fields. Makes app logic cleaner.
+
+        Returns:
+
+        """
+        return cls(total=zero, free=zero, locked=zero)
 
     @staticmethod
     def classname():

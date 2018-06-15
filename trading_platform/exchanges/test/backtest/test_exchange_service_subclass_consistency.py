@@ -1,19 +1,16 @@
 """
-nosetests test.services.exchange.backtest.test_backtest_service.TestBacktestService --nocapture
+nosetests test.services.exchange.backtest.test_backtest_service.TestBacktestExchangeService --nocapture
 """
 import datetime
 import unittest
-from copy import deepcopy
 
 import pandas
-from nose.tools import eq_, assert_greater, assert_almost_equal
 
 from trading_platform.core.test.data import Defaults, eth_withdrawal_fee
-from trading_platform.exchanges.backtest.backtest_service import BacktestService
+from trading_platform.exchanges.backtest.backtest_exchange_service import BacktestExchangeService
 from trading_platform.exchanges.data.enums import exchange_ids
-from trading_platform.exchanges.data.financial_data import one, two, FinancialData, zero
+from trading_platform.exchanges.data.financial_data import two, FinancialData
 from trading_platform.exchanges.data.pair import Pair
-from trading_platform.utils.exceptions import InsufficientFundsException
 
 
 class TestExchangeServiceSubclassConsistency(unittest.TestCase):
@@ -49,7 +46,7 @@ class TestExchangeServiceSubclassConsistency(unittest.TestCase):
             }
         ])
         withdrawal_fees.set_index('currency', inplace=True)
-        self.te = BacktestService(exchange_id=exchange_ids.binance, trade_fee=self.trade_fee,
+        self.te = BacktestExchangeService(exchange_id=exchange_ids.binance, trade_fee=self.trade_fee,
                                   withdrawal_fees=withdrawal_fees, echo=False)
         self.te.deposit_immediately(self.base, self.initial_base_capital)
         self.te.deposit_immediately(self.quote, self.initial_quote_capital)
