@@ -1,24 +1,20 @@
 import unittest
-from collections import Set
 from copy import copy
 from logging import Logger
-from typing import Dict, List
+from typing import Dict, Set, List
 
-from nose.tools import eq_
+from nose.tools import eq_, assert_greater
 
+from trading_platform.core.services.logging_service import LoggingService
 from trading_platform.core.test.util_methods import eq_ignore_certain_fields
+from trading_platform.exchanges.backtest import backtest_subclasses
 from trading_platform.exchanges.backtest.backtest_service import BacktestService
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
 from trading_platform.exchanges.data.enums.order_type import OrderType
-from trading_platform.exchanges.data.financial_data import FinancialData
-
+from trading_platform.exchanges.data.financial_data import FinancialData, two
 from trading_platform.exchanges.data.order import Order
-from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
-
-from trading_platform.core.services.logging_service import LoggingService
-from trading_platform.exchanges.backtest import backtest_subclasses
 from trading_platform.exchanges.order_execution_service import OrderExecutionService
 from trading_platform.storage.daos.order_dao import OrderDao
 from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
@@ -26,15 +22,8 @@ from trading_platform.utils.datetime_operations import utc_timestamp
 
 
 class TestOrderExecutionService(unittest.TestCase):
-    order_fields_to_ignore = [
-        'processing_time',
-        'exchange_order_id',
-        'order_status'
-    ]
-
     @classmethod
     def setUpClass(cls):
-        cls.backtest_services = backtest_subclasses.instantiate()
         cls.engine = SqlAlchemyEngine.local_engine_maker()
         cls.engine.initialize_tables()
         cls.session = cls.engine.scoped_session_maker()
@@ -43,6 +32,11 @@ class TestOrderExecutionService(unittest.TestCase):
 
         cls.processing_time: float = utc_timestamp()
         cls.strategy_execution_id = str(utc_timestamp())
+        cls.base: str = 'USDT'
+        cls.quote: str = 'ETH'
+        cls.quote_amount = FinancialData(5)
+        cls.quote_price = FinancialData(2)
+
         cls.base_order: Order = Order(**{
             # app metadata
             'processing_time': cls.processing_time,
@@ -55,16 +49,17 @@ class TestOrderExecutionService(unittest.TestCase):
             'order_type': OrderType.limit,
 
             # order metadata
-            'base': 'USDT',
-            'quote': 'NEO',
+            'base': cls.base,
+            'quote': cls.quote,
             'order_status': OrderStatus.pending,
 
-            'amount': FinancialData(5),
-            'price': FinancialData(50)
+            'amount': cls.quote_amount,
+            'price': cls.quote_price
         })
 
     def setUp(self):
         self.backtest_services: Dict[id, BacktestService] = backtest_subclasses.instantiate()
+        self.bittrex = self.backtest_services[exchange_ids.bittrex]
         self.order_execution_service: OrderExecutionService = OrderExecutionService(
             logger=self.logger, order_dao=self.order_dao, exchanges_by_id=self.backtest_services,
             multithreaded=False)
@@ -79,22 +74,87 @@ class TestOrderExecutionService(unittest.TestCase):
         cls.engine.drop_tables()
 
     def test_execute_buy_order(self):
+        # multiple by two to make sure there's enough base
+        self.bittrex.deposit_immediately(self.base, self.quote_amount * self.quote_price * two)
+
         buy_order: Order = copy(self.base_order)
         buy_order.order_side = OrderSide.buy
-        self.execute_order(buy_order)
+        self.execute_order(buy_order, True)
 
-    def execute_order(self, order: Order):
-        bittrex = self.backtest_services[exchange_ids.bittrex]
-        bittrex.deposit_immediately('USDT', FinancialData(1000))
-        order_set: Set[Order] = {order}
-        order_executed: Order = self.order_execution_service.execute_order(order, self.session, write_pending_order=True)
+    def test_execute_buy_order_write_pending(self):
+        # multiple by two to make sure there's enough base
+        self.bittrex.deposit_immediately(self.base, self.quote_amount * self.quote_price * two)
+
+        buy_order: Order = copy(self.base_order)
+        buy_order.order_side = OrderSide.buy
+        self.execute_order(buy_order, False)
+
+    def test_execute_sell_order_write_pending(self):
+        self.bittrex.deposit_immediately(self.quote, self.quote_amount)
+        self.bittrex.set_usdt_tickers({
+            'USDT': FinancialData(1)
+        })
+        self.bittrex.set_buy_price('{0}_{1}'.format(self.quote, self.base), self.quote_price)
+        sell_order: Order = copy(self.base_order)
+        sell_order.order_side = OrderSide.sell
+        self.execute_order(sell_order, True)
+
+    def test_execute_sell_order(self):
+        self.bittrex.deposit_immediately(self.quote, self.quote_amount)
+        self.bittrex.set_usdt_tickers({
+            'USDT': FinancialData(1)
+        })
+        self.bittrex.set_buy_price('{0}_{1}'.format(self.quote, self.base), self.quote_price)
+        sell_order: Order = copy(self.base_order)
+        sell_order.order_side = OrderSide.sell
+        self.execute_order(sell_order, False)
+
+    def test_execute_orders(self):
+        # multiple by two to make sure there's enough base
+        self.bittrex.deposit_immediately(self.base, self.quote_amount * self.quote_price * two)
+        self.bittrex.deposit_immediately(self.quote, self.quote_amount)
+        self.bittrex.set_buy_price('{0}_{1}'.format(self.quote, self.base), self.quote_price)
+        self.bittrex.set_usdt_tickers({
+            'USDT': FinancialData(1)
+        })
+
+        buy_order: Order = copy(self.base_order)
+        buy_order.order_side = OrderSide.buy
+
+        sell_order: Order = copy(self.base_order)
+        sell_order.order_side = OrderSide.sell
+
+        order_set: Set[Order] = {buy_order, sell_order}
+        self.order_execution_service.execute_order_set(order_set, self.session, write_pending_order=True)
+
+    def execute_order(self, order: Order, write_pending_order=True):
+        order_executed: Order = self.order_execution_service.execute_order(order, self.session,
+                                                                           write_pending_order=write_pending_order)
 
         # compare order with order returned from exchange
-        eq_ignore_certain_fields(order_executed, order, fields_to_ignore=self.order_fields_to_ignore)
-        assert(order_executed.exchange_order_id is not None)
+        eq_ignore_certain_fields(order_executed, order, fields_to_ignore=[
+            'processing_time',
+            'exchange_order_id',
+            'order_status'
+        ])
+        assert (order_executed.exchange_order_id is not None)
+        assert_greater(order_executed.processing_time, order.processing_time)
         eq_(order_executed.order_status, OrderStatus.open)
 
         # compare order with order returned from the database
         session, orders = self.order_dao.fetch_all(self.session)
-        order_from_db = orders[0]
-        eq_ignore_certain_fields(order_from_db, order, fields_to_ignore=['db_id', 'created_at'])
+
+        num_orders_written = 2 if write_pending_order else 1
+        expected_order_statuses = [OrderStatus.pending, OrderStatus.open] if write_pending_order else [OrderStatus.open]
+        eq_(len(orders), num_orders_written)
+        actual_order_statuses: List[OrderStatus] = list(map(lambda x: x.order_status, orders))
+        for order_status in expected_order_statuses:
+            assert(order_status in actual_order_statuses)
+
+        open_order_from_db = self.order_dao.fetch_latest_with_order_id(order_id=order.order_id, session=self.session)
+        eq_ignore_certain_fields(open_order_from_db, order_executed, fields_to_ignore=[
+            'db_id',
+            'created_at',
+        ])
+        assert(open_order_from_db.db_id is not None)
+        assert(open_order_from_db.created_at is not None)

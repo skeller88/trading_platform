@@ -162,7 +162,6 @@ class BacktestService(ExchangeServiceAbc):
         Returns FinancialData: base received after fees
 
         """
-        pair: Pair = order.pair
         base: str = order.base
         quote: str = order.quote
         price: FinancialData = order.price
@@ -176,7 +175,7 @@ class BacktestService(ExchangeServiceAbc):
 
             # numerical data
             'amount': amount,
-            'price': order,
+            'price': price,
 
             # metadata
             'base': base,
@@ -187,15 +186,16 @@ class BacktestService(ExchangeServiceAbc):
 
         if amount <= zero:
             return insufficient_order_size
-        if self.below_min_base_order_value(amount, order):
+        if self.below_min_base_order_value(amount, price):
             return insufficient_order_size
         if self.__balances[quote] >= amount:
             # print(self.name + "\tSelling\t%f@%f" % (amount, self.ticker))
-            base_amount_received = order * amount / (one + self.trade_fee)
+            base_amount_received = price * amount / (one + self.trade_fee)
             self.__balances[base] += base_amount_received
             self.__balances[quote] -= amount
 
-            gross = (order - self.__buy_prices[pair.name]) * FinancialData(amount)
+            pair_name: str = Pair.name_for_base_and_quote(base=base, quote=quote)
+            gross = (price - self.__buy_prices[pair_name]) * FinancialData(amount)
             gross_usdt = self.usdt_tickers[base] * gross
 
             if gross_usdt >= 0:
@@ -226,7 +226,7 @@ class BacktestService(ExchangeServiceAbc):
         else:
             # print('Could not sell', insufficient_funds)
             raise InsufficientFundsException('{0} quote needed to sell, only {1} quote available'.format(
-                amount, self.__balances[pair.quote]))
+                amount, self.__balances[quote]))
 
     def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
         return {}
@@ -268,14 +268,17 @@ class BacktestService(ExchangeServiceAbc):
         """
         self.__buy_prices = buy_prices
 
-    def set_buy_price(self, currency, buy_price):
-        self.__buy_prices[currency] = buy_price
+    def set_usdt_tickers(self, usdt_tickers: Dict):
+        self.usdt_tickers = usdt_tickers
+
+    def set_buy_price(self, pair_name, buy_price):
+        self.__buy_prices[pair_name] = buy_price
 
     def get_buy_prices(self):
         return self.__buy_prices
 
-    def get_buy_price(self, currency):
-        return self.__buy_prices.get(currency)
+    def get_buy_price(self, pair_name):
+        return self.__buy_prices.get(pair_name)
 
     @staticmethod
     def total_usdt_value(funds, end_tickers):
