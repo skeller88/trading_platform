@@ -93,24 +93,23 @@ class BacktestService(ExchangeServiceAbc):
     # Trading - Orders
     ###########################################
 
-    def cancel_order(self, order_id, pair, params={}):
+    def cancel_order(self, exchange_order_id, pair, params={}):
         raise NotImplementedError('cancel_order')
 
-    def create_limit_buy_order(self, pair, amount, price, *params):
+    def create_limit_buy_order(self, order, params=None):
         """
 
         Args:
-            pair: unused in this ExchangeServiceAbc implementation
-            amount: quote to purchase after fees
-            price: amount to spend
-            *params:
+            order: amount to spend
+            **params:
 
         Returns FinancialData: amount of quote purchased after fees
 
         """
-        base = pair.base
-        quote = pair.quote
-        amount = FinancialData(amount)
+        base: str = order.base
+        quote: str = order.quote
+        price: FinancialData = order.price
+        amount: FinancialData = order.amount
         base_plus_fees = self.base_needed_to_buy_currency_after_trade_fees(amount=amount, price=price)
         if base_plus_fees == zero:
             return zero
@@ -118,37 +117,38 @@ class BacktestService(ExchangeServiceAbc):
             return zero
         # deal with small rounding errors
         if (self.__balances[base] - base_plus_fees) / abs(base_plus_fees) >= -1e-6:
-            print_if_debug_enabled(self.echo, "\n%s\tBuying\t%f@%f, base_needed_to_buy_quote_amount:%f" % (
-            self.name, amount, price, base_plus_fees))
             self.print_balances()
             self.__balances[base] -= base_plus_fees
             # deal with small rounding errors
             self.__balances[base] = max(self.__balances[base], zero)
             self.__balances[quote] += amount
             self.print_balances()
-            self.__buy_prices[pair.name] = price
+            pair_name: str = Pair.name_for_base_and_quote(base=base, quote=quote)
+            self.__buy_prices[pair_name] = price
 
             return Order(**{
+                'strategy_execution_id': order.strategy_execution_id,
+
                 # exchange-related data
                 'exchange_id': self.exchange_id,
                 'order_type': OrderType.limit,
-                'order_id': str(utc_timestamp()),
+                'exchange_order_id': str(utc_timestamp()),
 
                 # numerical data
                 'amount': amount,
                 'price': price,
 
                 # metadata
-                'base': pair.base,
-                'quote': pair.quote,
-                'order_status': OrderStatus.filled,
+                'base': base,
+                'quote': quote,
+                'order_status': OrderStatus.open,
                 'order_side': OrderSide.buy
             })
         else:
             raise InsufficientFundsException('{0} base needed to buy {1} of quote, only {2} base available'.format(
                 base_plus_fees, amount, self.__balances[base]))
 
-    def create_limit_sell_order(self, pair, amount, price, *params):
+    def create_limit_sell_order(self, order, params=None):
         """
         Specify how much quote you want to sell, and the trading fee is subtracted from the quote sold. Different from
         .buy() in that the fees are not added to the amount to sell. The fees are subtracted. This is how the exchanges
@@ -156,45 +156,47 @@ class BacktestService(ExchangeServiceAbc):
         return: base_amount_received after fees. Will always be < amount * self.ticker.
         # Assume that the same base currency is used for every sell order.
         Args:
-            pair:
-            amount:
             price FinancialData: in base currency
-            *params:
+            **params:
 
         Returns FinancialData: base received after fees
 
         """
-        amount = FinancialData(amount)
+        pair: Pair = order.pair
+        base: str = order.base
+        quote: str = order.quote
+        price: FinancialData = order.price
+        amount: FinancialData = order.amount
 
         insufficient_order_size = Order(**{
             # exchange-related data
             'exchange_id': self.exchange_id,
             'order_type': OrderType.limit,
-            'order_id': str(utc_timestamp()),
+            'exchange_order_id': str(utc_timestamp()),
 
             # numerical data
             'amount': amount,
-            'price': price,
+            'price': order,
 
             # metadata
-            'base': pair.base,
-            'quote': pair.quote,
+            'base': base,
+            'quote': quote,
             'order_status': OrderStatus.insufficient_order_size,
             'order_side': OrderSide.sell
         })
 
         if amount <= zero:
             return insufficient_order_size
-        if self.below_min_base_order_value(amount, price):
+        if self.below_min_base_order_value(amount, order):
             return insufficient_order_size
-        if self.__balances[pair.quote] >= amount:
+        if self.__balances[quote] >= amount:
             # print(self.name + "\tSelling\t%f@%f" % (amount, self.ticker))
-            base_amount_received = price * amount / (one + self.trade_fee)
-            self.__balances[pair.base] += base_amount_received
-            self.__balances[pair.quote] -= amount
+            base_amount_received = order * amount / (one + self.trade_fee)
+            self.__balances[base] += base_amount_received
+            self.__balances[quote] -= amount
 
-            gross = (price - self.__buy_prices[pair.name]) * FinancialData(amount)
-            gross_usdt = self.usdt_tickers[pair.base] * gross
+            gross = (order - self.__buy_prices[pair.name]) * FinancialData(amount)
+            gross_usdt = self.usdt_tickers[base] * gross
 
             if gross_usdt >= 0:
                 self.capital_gains += gross_usdt
@@ -202,20 +204,22 @@ class BacktestService(ExchangeServiceAbc):
                 self.capital_losses += abs(gross_usdt)
 
             return Order(**{
+                'strategy_execution_id': order.strategy_execution_id,
+
                 # exchange-related data
                 'exchange_id': self.exchange_id,
                 'order_type': OrderType.limit,
-                'order_id': str(utc_timestamp()),
+                'exchange_order_id': str(utc_timestamp()),
 
                 # numerical data
                 'amount': amount,
                 'price': price,
 
                 # metadata
-                'base': pair.base,
-                'quote': pair.quote,
+                'base': base,
+                'quote': quote,
                 # The exchange won't return the order status when the order is placed, so assume it's open
-                'order_status': OrderStatus.filled,
+                'order_status': OrderStatus.open,
                 'order_side': OrderSide.sell
             })
 
@@ -230,15 +234,15 @@ class BacktestService(ExchangeServiceAbc):
     def fetch_open_orders(self, symbol=None) -> Dict[str, Order]:
         return {}
 
-    def fetch_order(self, order_id: str, symbol: str) -> Optional[Order]:
+    def fetch_order(self, exchange_order_id: str, symbol: str) -> Optional[Order]:
         pass
 
     def buy_all(self, pair, price):
         amount = FinancialData(self.__balances[pair.base] / (price * (one + self.trade_fee)))
-        return self.create_limit_buy_order(pair=pair, amount=amount, price=price)
+        return self.create_limit_buy_order()
 
     def sell_all(self, pair, price):
-        return self.create_limit_sell_order(pair, self.__balances[pair.quote], price)
+        return self.create_limit_sell_order(price)
 
     ###########################################
     # Account state

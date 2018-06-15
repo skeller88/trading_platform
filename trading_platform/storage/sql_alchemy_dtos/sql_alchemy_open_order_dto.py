@@ -34,7 +34,7 @@ class SqlAlchemyOpenOrderDto(Base):
     __tablename__ = 'open_orders'
     # primary keys and indexes
     db_id = Column(BigInteger, autoincrement=True, primary_key=True)
-    order_index = Column(String, index=True, nullable=False)
+    order_id = Column(String, index=True, nullable=False)
     processing_time = Column(Float, index=True, nullable=False)
     exchange_id = Column(Integer, index=True, nullable=False)
 
@@ -46,7 +46,7 @@ class SqlAlchemyOpenOrderDto(Base):
     updated_at = Column(Float, onupdate=utc_timestamp, nullable=True)
 
     # exchange-related metadata
-    order_id = Column(String, nullable=False)
+    exchange_order_id = Column(String, nullable=False)
     order_type = Column(Integer, nullable=True)
     event_time = Column(Float, nullable=True)
 
@@ -57,8 +57,8 @@ class SqlAlchemyOpenOrderDto(Base):
     order_side = Column(Integer, nullable=True)
 
     def __repr__(self):
-        return "<SqlAlchemyOpenOrderDto(db_id='%s', order_index='%s', order_status='%s')>" % (
-            self.db_id, self.order_index, self.order_status)
+        return "<SqlAlchemyOpenOrderDto(db_id='%s', order_id='%s', order_status='%s')>" % (
+            self.db_id, self.order_id, self.order_status)
 
     def to_popo(self):
         params = {
@@ -68,7 +68,7 @@ class SqlAlchemyOpenOrderDto(Base):
 
             # database metadata
             'db_id': self.db_id,
-            'order_index': self.order_index,
+            'order_id': self.order_id,
             'created_at': self.created_at,
             'updated_at': self.updated_at,
 
@@ -76,7 +76,7 @@ class SqlAlchemyOpenOrderDto(Base):
 
             'exchange_id': self.exchange_id,
             'event_time': self.event_time,
-            'order_id': self.order_id,
+            'exchange_order_id': self.exchange_order_id,
             'order_type': self.order_type,
 
             # order metadata
@@ -97,7 +97,7 @@ class SqlAlchemyOpenOrderDto(Base):
 
             # database metadata
             db_id=popo.db_id,
-            order_index=popo.order_index,
+            order_id=popo.order_id,
             created_at=popo.created_at,
             updated_at=popo.updated_at,
 
@@ -105,7 +105,7 @@ class SqlAlchemyOpenOrderDto(Base):
 
             exchange_id=popo.exchange_id,
             event_time=popo.event_time,
-            order_id=popo.order_id,
+            exchange_order_id=popo.exchange_order_id,
 
             # order metadata
             base=popo.base,

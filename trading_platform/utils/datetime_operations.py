@@ -51,3 +51,7 @@ def timestamp_to_datetime(timestamp):
 
 def utc_timestamp():
     return datetime.datetime.utcnow().timestamp()
+
+
+def utc_timestamp_sec():
+    return datetime.datetime.utcnow().replace(microsecond=0).timestamp()

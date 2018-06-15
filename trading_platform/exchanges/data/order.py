@@ -1,11 +1,9 @@
 from copy import deepcopy
+from typing import Dict
 
 from trading_platform.exchanges.data.enums import exchange_ids
-from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
-from trading_platform.exchanges.data.enums.order_type import OrderType
 from trading_platform.exchanges.data.financial_data import FinancialData, zero
-from trading_platform.exchanges.data.pair import Pair
 from trading_platform.utils.datetime_operations import utc_timestamp, microsecond_timestamp_to_second_timestamp
 
 STRFTIME_MICROSECONDS = '%Y-%m-%dT%H:%M:%SZ'
@@ -24,7 +22,7 @@ class Order:
 
     Order on an exchange. Can be open, cancelled, partially filled, or filled. Each ArbitrageAttempt has two Orders
     associated with it. An Order that's open will have an OpenOrder associated with it. Associations occur via the
-    order_index field.
+    order_id field.
 
     Example of an open order:
     [{'info': {
@@ -49,6 +47,40 @@ class Order:
     # the database layer
     # No way to reliably get all of the fields of an object so they have to be tracked:
     # https://stackoverflow.com/questions/21945067/how-to-list-all-fields-of-a-class-in-python-and-no-methods
+    required_fields = [
+        # exchange-related metadata
+        'exchange_id',
+        'base',
+        'quote',
+
+        # order metadata.
+        'strategy_execution_id',
+        'order_id',
+        'version',
+        'processing_time',
+        'order_status',
+    ]
+
+    # Numpy will cast certain fields to an int when they should always have FinancialData-level precision
+    # So specify the types of these fields when reading Order data from a csv file.
+    # Returns:
+    financial_data_fields = [
+        'amount',
+        'filled',
+        'price',
+        'remaining'
+    ]
+
+    index_fields = [
+        'strategy_execution_id',
+        'exchange_id',
+        'quote',
+        'base',
+        'order_type',
+        'price',
+        'amount'
+    ]
+
     nullable_fields = [
         # database metadata
         'db_id',
@@ -58,34 +90,20 @@ class Order:
         # exchange-related metadata
         # Binance returns the timestamp of an order, Bittrex doesn't
         'event_time',
-        
+
         # Cancelled orders and orders returned from the open_orders table won't have the following numerical fields:
         'amount',
         'filled',
         'price',
         'remaining',
+        'params,'
 
         # Cancelled orders won't have order metadata. 
         'order_side',
-        'order_type'
-        
+        'order_type',
+
         # Pending orders won't have the following fields:
-        'processing_time',
-        'order_index',
-        'order_id',
-    ]
-
-    required_fields = [
-        # app metadata
-        'version',
-
-        # exchange-related metadata
-        'exchange_id',
-
-        # order metadata.
-        'base',
-        'quote',
-        'order_status',
+        'exchange_order_id',
     ]
 
     def __init__(self, **kwargs):
@@ -94,7 +112,7 @@ class Order:
         - updated_at
 
         Fields that will be created by core.market_Data.order.Order constructor:
-        - order_index
+        - order_id
         - processing_time
 
         Fields that will be created by the database:
@@ -110,12 +128,12 @@ class Order:
             # database metadata
             db_id: int
                     #
-            order_index: str. Not unique, but all orders with this index will be associated with the same order on a
+            order_id: str. Not unique, but all orders with this index will be associated with the same order on a
                 given exchange. Used to query an order in the database without the db id, so must be able to be constructed
                 from exchange data alone. Also used to group multiple snapshots (database entities) and track the state of
                 an order over time. Example: "exchange-1-7754382".
 
-                Can be either "exchange_id-order_id" or "[exchange_id]_[quote]_[base]_[order_type]_[price]_[amount]"
+                Can be either "exchange_id-exchange_order_id" or "[exchange_id]_[quote]_[base]_[order_type]_[price]_[amount]"
 
             margin: float
             created_at: Decimal
@@ -124,7 +142,7 @@ class Order:
             # exchange-related metadata
             exchange_id: int. core/market_data/enums/exchange_ids.py
             event_time: Decimal. Time when the order was placed. Assumed to be in UTC.
-            order_id: str. Id of the order on the exchange
+            exchange_order_id: str. Id of the order on the exchange
             order_type: int. core/market_data/enums/order_type.py
 
             # order numerical data
@@ -132,6 +150,7 @@ class Order:
             filled: str
             price: str
             remaining: str. Size of order remaining.
+            params: Dict. Order parameters.
 
             # order metadata
             base: str
@@ -144,7 +163,7 @@ class Order:
         # Order instance could either be instantiated for the first time or populated with data from a DTO
         self.processing_time = processing_time if processing_time is not None else utc_timestamp()
         self.version = kwargs.get('version') if kwargs.get('version') is not None else 0
-        self.trade_saga_id = kwargs.get('trade_saga_id', 0)
+        self.strategy_execution_id = kwargs.get('strategy_execution_id', 0)
 
         # database data
         self.db_id = kwargs.get('db_id')
@@ -154,7 +173,7 @@ class Order:
         # exchange-related data
         self.exchange_id = kwargs.get('exchange_id')
         self.event_time = kwargs.get('event_time')
-        self.order_id = kwargs.get('order_id')
+        self.exchange_order_id = kwargs.get('exchange_order_id')
         self.order_type = kwargs.get('order_type')
 
         # order numerical data
@@ -162,6 +181,7 @@ class Order:
         self.filled = FinancialData(kwargs.get('filled'))
         self.price = FinancialData(kwargs.get('price'))
         self.remaining = FinancialData(kwargs.get('remaining'))
+        self.params = kwargs.get('params')
 
         # order data
         self.base = kwargs.get('base')
@@ -169,22 +189,12 @@ class Order:
         self.order_status = kwargs.get('order_status')
         self.order_side = kwargs.get('order_side')
 
-        order_index = kwargs.get('order_index')
+        order_id = kwargs.get('order_id')
 
-        if order_index is not None:
-            self.order_index = order_index
+        if order_id is not None:
+            self.order_id = order_id
         else:
-            index_fields = [
-                'trade_saga_id',
-                'exchange_id',
-                'quote',
-                'base',
-                'order_type',
-                'price',
-                'amount'
-            ]
-            self.order_index = '_'.join(map(lambda field: getattr(self, field), index_fields))
-
+            self.order_id = '_'.join(map(lambda field: str(getattr(self, field)), self.index_fields))
         # comment out for now because I don't want to deal with the Order in run_backtest having all of the required
         # fields
         # check_required_fields(self)
@@ -209,19 +219,20 @@ class Order:
             'version': self.version,
 
             'db_id': self.db_id,
-            'order_index': self.order_index,
+            'order_id': self.order_id,
             'created_at': self.created_at,
             'updated_at': self.updated_at,
 
             'exchange_id': self.exchange_id,
             'event_time': self.event_time,
-            'order_id': self.order_id,
+            'exchange_order_id': self.exchange_order_id,
             'order_type': self.order_type,
 
             'amount': self.amount,
             'filled': self.filled,
             'price': self.price,
             'remaining': self.remaining,
+            'params': self.params,
 
             'base': self.base,
             'quote': self.quote,
@@ -249,19 +260,33 @@ class Order:
         copy.remaining = zero
         return copy
 
-    @classmethod
-    def financial_data_fields(cls):
+    def copy_updated_with_exchange_data(self, order_data: Dict):
         """
-        Numpy will cast certain fields to an int when they should always have FinancialData-level precision
-        So specify the types of these fields when reading Order data from a csv file.
+        Construct an order instance that's a copy of the current instance, but with certain fields
+        overwritten by the values in order_data. This method exists because the data returned from
+        an exchange for a given Order may be different from the values of an Order instance.
+
+        Args:
+            order_data:
+
         Returns:
+            copy: Order
+
         """
-        return [
-            'amount',
-            'filled',
-            'price',
-            'remaining'
-        ]
+        copy: Order = deepcopy(self)
+        copy.exchange_order_id = order_data.get('id')
+
+        def overwrite_field_with_exchange_data(field):
+            value = order_data.get(field)
+            if value is not None:
+                instance_field_value = getattr(copy, field)
+                if value != instance_field_value:
+                    print('order field {0} - instance value is {1}, exchange_data value is {2}'.format(field, value,
+                                                                                                       instance_field_value))
+                setattr(copy, field, value)
+
+        [overwrite_field_with_exchange_data(field) for field in self.financial_data_fields]
+        return copy
 
     @classmethod
     def csv_fieldnames(cls):
@@ -279,39 +304,20 @@ class Order:
         Returns:
 
         """
-        pair = Pair.from_exchange_client_string(order_data.get('symbol'))
-
+        remaining = order_data.get('remaining') if order_data.get('remaining') is not None else order_data.get('amount')
         standardized = {
-            # exchange-related data
-            'exchange_id': exchange_id,
-            'order_type': OrderType.from_exchange_data(order_data.get('type')),
-
             # numerical data
             'amount': FinancialData(order_data.get('amount')),
             'cost': FinancialData(order_data.get('cost')),
             'filled': FinancialData(order_data.get('filled')),
             'price': FinancialData(order_data.get('price')),
-            'remaining': FinancialData(order_data.get('remaining')),
-
-            # metadata
-            'base': pair.base,
-            'quote': pair.quote,
-            # The exchange won't return the order status when the order is placed, so assume it's open
-            'order_status': OrderStatus.open,
-            'order_side': OrderSide.from_exchange_data(order_data.get('side'))
+            'remaining': FinancialData(remaining),
         }
 
         if exchange_id == exchange_ids.binance:
-            # Binance has an orderId that is type float, and origClientOrderId that is type str. Documentation is lacking
-            # but seems like origClientOrderId can be set client side, or auto-generated. Only need to send one of orderId
-            # or origClientOrderId when querying or cancelling an order, for now anyway. Let's see if we get away with it:
-            # https://www.binance.com/restapipub.html
-            standardized['order_id'] = order_data.get('id')
+            standardized['exchange_order_id'] = order_data.get('id')
         elif exchange_id == exchange_ids.bittrex:
-            standardized['order_id'] = order_data.get('id')
-
-        if not order_data.get('remaining'):
-            standardized['remaining'] = order_data.get('amount')
+            standardized['exchange_order_id'] = order_data.get('id')
 
         if order_data.get('timestamp'):
             standardized['event_time'] = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))

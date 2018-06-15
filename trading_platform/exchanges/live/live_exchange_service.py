@@ -12,11 +12,9 @@ from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
 from trading_platform.exchanges.data.financial_data import FinancialData, zero, one
 from trading_platform.exchanges.data.order import Order
+from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
-from trading_platform.utils import api_request_msgs
-from trading_platform.utils.api_request_msgs import LIMIT_BUY_ORDER_ATTEMPT, LIMIT_SELL_ORDER_ATTEMPT, LIMIT_BUY_ORDER_ERR, \
-    LIMIT_SELL_ORDER_ERR
 from trading_platform.utils.datetime_operations import utc_timestamp
 from trading_platform.utils.http_utils import make_api_limit_order_request, make_api_request
 
@@ -47,22 +45,21 @@ class LiveExchangeService(ExchangeServiceAbc):
     # Trading - Orders
     ###########################################
 
-    def cancel_order(self, order_id, pair):
+    def cancel_order(self, exchange_order_id, pair):
         """
-        :param order_id: str
+        :param exchange_order_id: str
         :param pair: Pair
         :return:
         """
         self.__client.verbose = True
         if self.exchange_id == exchange_ids.binance:
-            order_id = int(order_id)
-        response = make_api_request(api_request_msgs.CANCEL_ORDER_ERR.format(self.exchange_name),
-                                    self.__client.cancel_order, order_id, pair.name_for_exchange_clients, {})
+            exchange_order_id = int(exchange_order_id)
+        response = make_api_request(self.__client.cancel_order, exchange_order_id, pair.name_for_exchange_clients, {})
         self.__client.verbose = False
         if response:
             return Order(**{
                 'exchange_id': self.exchange_id,
-                'order_id': order_id,
+                'exchange_order_id': exchange_order_id,
                 'order_status': OrderStatus.cancelled,
                 'base': pair.base,
                 'quote': pair.quote
@@ -70,37 +67,38 @@ class LiveExchangeService(ExchangeServiceAbc):
 
         raise Exception('Order was not cancelled', response)
 
-    def create_limit_buy_order(self, pair, amount, price, *params):
-        return self.create_limit_order(OrderSide.buy, pair, amount, price, *params)
+    def create_limit_buy_order(self, order, params=None) -> Optional[Order]:
+        if order.order_side != OrderSide.buy:
+            raise Exception('OrderSide != OrderSide.buy')
+        return self.create_limit_order(order, **params)
 
-    def create_limit_sell_order(self, pair, amount, price, *params):
-        return self.create_limit_order(OrderSide.sell, pair, amount, price, *params)
+    def create_limit_sell_order(self, order, params=None) -> Optional[Order]:
+        if order.order_side != OrderSide.sell:
+            raise Exception('OrderSide != OrderSide.sell')
+        return self.create_limit_order(order, **params)
 
-    def create_limit_order(self, order_side, pair, amount, price, *params):
-        attempt_msg = LIMIT_BUY_ORDER_ATTEMPT if order_side == OrderSide.buy else LIMIT_SELL_ORDER_ATTEMPT
-        err_msg = LIMIT_BUY_ORDER_ERR if order_side == OrderSide.buy else LIMIT_SELL_ORDER_ERR
-        print(attempt_msg.format(self.exchange_name))
-        err_msg = err_msg.format(self.exchange_name)
-
+    def create_limit_order(self, order: Order, **params) -> Optional[Order]:
         if self.exchange_id == exchange_ids.bittrex:
             # Bittrex integration expects floats
-            amount = float(amount)
-            price = float(price)
+            amount = float(order.amount)
+            price = float(order.price)
+        else:
+            amount = order.amount
+            price = order.price
+
+        pair: Pair = Pair(base=order.base, quote=order.quote)
 
         self.__client.verbose = True
-        limit_order_method = self.__client.create_limit_buy_order if order_side == OrderSide.buy else self.__client.create_limit_sell_order
-        response = make_api_limit_order_request(err_msg, limit_order_method, pair.name_for_exchange_clients, amount,
+        limit_order_method = self.__client.create_limit_buy_order if order.order_side == OrderSide.buy else self.__client.create_limit_sell_order
+        response = make_api_limit_order_request(limit_order_method, pair.name_for_exchange_clients, amount,
                                                 price, params)
         self.__client.verbose = False
+
         if response is None:
             return
 
-        standardized = Order.standardize_exchange_data(response, self.exchange_id)
-
-        # additional exchange data
-        standardized = self.add_missing_create_limit_order_fields(price=price, amount=amount, pair=pair,
-                                                                  order_data=standardized)
-        return Order(**standardized)
+        order_copy: Order = order.copy_updated_with_exchange_data(response)
+        return order_copy
 
     def add_missing_create_limit_order_fields(self, pair, price, amount, order_data):
         """
@@ -115,9 +113,6 @@ class LiveExchangeService(ExchangeServiceAbc):
         Returns:
 
         """
-        order_data['exchange_id'] = self.exchange_id
-        order_data['base'] = pair.base
-        order_data['quote'] = pair.quote
         order_data['amount'] = order_data.get('amount') if order_data.get('amount') is not None else FinancialData(
             amount)
         order_data['price'] = order_data.get('price') if order_data.get('price') is not None else FinancialData(price)
@@ -132,8 +127,8 @@ class LiveExchangeService(ExchangeServiceAbc):
     def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
         return self.__client.fetch_closed_orders(symbol, since, limit, params)
 
-    def fetch_order(self, order_id=None, symbol=None) -> Optional[Order]:
-        return self.__client.fetch_order(id=order_id, symbol=symbol)
+    def fetch_order(self, exchange_order_id=None, symbol=None) -> Optional[Order]:
+        return self.__client.fetch_order(id=exchange_order_id, symbol=symbol)
 
     def fetch_orders(self, symbol=None):
         return self.__client.fetch_orders(symbol)
@@ -152,8 +147,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         self.__client.load_markets()
         try:
             self.__client.verbose = True
-            order_data_list = make_api_request(
-                api_request_msgs.OPEN_ORDERS_ERR.format(self.exchange_name), self.__client.fetch_open_orders, symbol)
+            order_data_list = make_api_request(self.__client.fetch_open_orders, symbol)
             self.__client.verbose = False
         except ccxt.OrderNotFound:
             order_data_list = None
@@ -164,12 +158,12 @@ class LiveExchangeService(ExchangeServiceAbc):
         for order_data in order_data_list:
             standardized = Order.standardize_exchange_data(order_data, self.exchange_id)
             order = Order(**standardized)
-            self.__open_orders[order.order_index] = order
+            self.__open_orders[order.order_id] = order
 
         return self.__open_orders
 
-    def get_open_order(self, order_index):
-        return self.__open_orders.get(order_index)
+    def get_open_order(self, order_id):
+        return self.__open_orders.get(order_id)
 
     ###########################################
     # Account State
@@ -303,7 +297,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         """
         self.__balances = {}
 
-        data = make_api_request(api_request_msgs.BALANCE_ERR.format(self.exchange_name), self.__client.fetch_balance)
+        data = make_api_request(self.__client.fetch_balance)
 
         if self.exchange_id == exchange_ids.bittrex:
             balances = data.get('info')
@@ -365,8 +359,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         return exchange_pairs.all_exchanges.get(self.exchange_id)
 
     def fetch_latest_tickers(self):
-        tickers = make_api_request(
-            api_request_msgs.TICKER_ERR.format(self.exchange_name), self.__client.fetch_tickers)
+        tickers = make_api_request(self.__client.fetch_tickers)
 
         if tickers is None:
             return

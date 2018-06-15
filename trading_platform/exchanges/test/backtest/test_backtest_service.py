@@ -68,7 +68,7 @@ class TestBacktestService(unittest.TestCase):
         prev_wallet_quote = self.te.get_balance(self.quote).total
         eq_(self.te.get_buy_price(self.pair.name), self.initial_ticker)
         new_price = self.initial_ticker * FinancialData(.5)
-        self.te.create_limit_buy_order(pair=self.pair, amount=quote_amount_to_buy, price=new_price)
+        self.te.create_limit_buy_order()
         eq_(self.te.get_buy_price(self.pair.name), new_price)
         eq_(self.te.get_balance(self.quote).total, prev_wallet_quote + quote_amount_to_buy)
         eq_(self.te.get_balance(self.base).total,
@@ -81,7 +81,7 @@ class TestBacktestService(unittest.TestCase):
         eq_(self.te.get_buy_price(self.pair.name), self.initial_ticker)
         new_price = self.initial_ticker * FinancialData(.5)
         self.te.min_base_order_value = quote_amount_to_buy * new_price
-        quote_purchased = self.te.create_limit_buy_order(pair=self.pair, amount=quote_amount_to_buy, price=new_price)
+        quote_purchased = self.te.create_limit_buy_order()
         eq_(quote_purchased.amount, quote_amount_to_buy)
         eq_(self.te.get_balance(self.quote).total, prev_wallet_quote + quote_amount_to_buy)
         eq_(self.te.get_balance(self.base).total,
@@ -94,7 +94,7 @@ class TestBacktestService(unittest.TestCase):
         eq_(self.te.get_buy_price(self.pair.name), self.initial_ticker)
         new_price = self.initial_ticker * FinancialData(.5)
         self.te.min_base_order_value = quote_amount_to_buy * new_price + 1
-        quote_purchased = self.te.create_limit_buy_order(pair=self.pair, amount=quote_amount_to_buy, price=new_price)
+        quote_purchased = self.te.create_limit_buy_order()
         eq_(quote_purchased.amount, zero)
         eq_(self.te.get_balance(self.quote).total, prev_wallet_quote)
         eq_(self.te.get_balance(self.base).total, self.initial_base_capital)
@@ -108,8 +108,7 @@ class TestBacktestService(unittest.TestCase):
 
     def test_create_limit_buy_order_insufficient_funds(self):
         try:
-            self.te.create_limit_buy_order(pair=self.pair, amount=self.te.get_balance(self.quote).total + one,
-                                           price=self.price)
+            self.te.create_limit_buy_order()
             raise Exception("Should have thrown an exception")
         except InsufficientFundsException:
             pass
@@ -120,7 +119,7 @@ class TestBacktestService(unittest.TestCase):
         # divide so that we can confirm division doesn't cause any rounding errors
         quote_to_sell = self.te.get_balance(self.quote).total / two
 
-        sell_order = self.te.create_limit_sell_order(self.pair, quote_to_sell, self.price, None)
+        sell_order = self.te.create_limit_sell_order(self.price, None)
         quote_sold_after_fees = sell_order.amount * (one - self.te.trade_fee)
         assert_almost_equal(self.te.get_balance(self.base).total, prev_wallet_base + quote_sold_after_fees * sell_order.price,
                             places=FinancialData.four_places)
@@ -135,7 +134,7 @@ class TestBacktestService(unittest.TestCase):
         buy_price = self.te.get_buy_price(self.pair.name)
         sell_price = buy_price * (one + FinancialData(.01))
 
-        sell_order = self.te.create_limit_sell_order(self.pair, quote_to_sell, sell_price, None)
+        sell_order = self.te.create_limit_sell_order(sell_price, None)
         quote_sold_after_fees = sell_order.amount * (one - self.te.trade_fee)
         assert_almost_equal(self.te.get_balance(self.base).total, prev_wallet_base + quote_sold_after_fees * sell_price, places=FinancialData.four_places)
         eq_(self.te.get_balance(self.quote).total, prev_wallet_quote - sell_order.amount)
@@ -150,7 +149,7 @@ class TestBacktestService(unittest.TestCase):
         buy_price = self.te.get_buy_price(self.pair.name)
         sell_price = buy_price * (one - FinancialData(.01))
 
-        sell_order = self.te.create_limit_sell_order(self.pair, quote_to_sell, sell_price, None)
+        sell_order = self.te.create_limit_sell_order(sell_price, None)
         quote_sold_after_fees = sell_order.amount * (one - self.te.trade_fee)
         assert_almost_equal(self.te.get_balance(self.base).total, prev_wallet_base + quote_sold_after_fees * sell_price,
                             places=FinancialData.four_places)
@@ -168,7 +167,7 @@ class TestBacktestService(unittest.TestCase):
         sell_price = buy_price * (one - FinancialData(.01))
         self.te.min_base_order_value = quote_to_sell * sell_price
 
-        sell_price = self.te.create_limit_sell_order(self.pair, quote_to_sell, sell_price, None)
+        sell_price = self.te.create_limit_sell_order(sell_price, None)
         assert (self.te.get_balance(self.base).total == prev_wallet_base + sell_price)
         assert (self.te.get_balance(self.quote).total == prev_wallet_quote - quote_to_sell)
         assert (self.te.capital_gains == 0)
@@ -184,7 +183,7 @@ class TestBacktestService(unittest.TestCase):
         sell_price = buy_price * (one - FinancialData(.01))
         self.te.min_base_order_value = quote_to_sell + 1 * sell_price
 
-        sell_order = self.te.create_limit_sell_order(self.pair, quote_to_sell, sell_price, None)
+        sell_order = self.te.create_limit_sell_order(sell_price, None)
         eq_(sell_order, zero)
         assert (self.te.get_balance(self.base).total == prev_wallet_base)
         assert (self.te.get_balance(self.quote).total == prev_wallet_quote)

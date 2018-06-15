@@ -1,16 +1,9 @@
-from typing import Dict, Optional
-
 import ccxt
 
-import trading_platform.utils.api_request_msgs as api_request_msgs
-from trading_platform.core.constants import exchange_pairs
-from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.enums import exchange_names, exchange_ids
 from trading_platform.exchanges.data.financial_data import FinancialData
-from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.ticker import Ticker
-from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
 from trading_platform.exchanges.live.live_exchange_service import LiveExchangeService
 from trading_platform.utils.http_utils import make_api_request
 
@@ -81,8 +74,7 @@ class GdaxLiveService():
         pass
 
     def fetch_ticker(self, market):
-        ticker = make_api_request(
-            api_request_msgs.TICKER_ERR.format(self.exchange_name), self.__client.fetch_ticker, market)
+        ticker = make_api_request(self.__client.fetch_ticker, market)
 
         pair_name, ticker_instance = Ticker.from_exchange_data(ticker, self.exchange_id, Ticker.current_version)
         if ticker_instance is None:
@@ -104,12 +96,12 @@ class GdaxLiveService():
         {
             "sequence": "3",
             "bids": [
-                [ price, size, order_id ],
+                [ price, size, exchange_order_id ],
                 [ "295.96","0.05088265","3b0f1225-7f84-490b-a29f-0faef9de823a" ],
                 ...
             ],
             "asks": [
-                [ price, size, order_id ],
+                [ price, size, exchange_order_id ],
                 [ "295.97","5.72036512","da863862-25f4-4868-ac41-005d11ab0a5f" ],
                 ...
             ]

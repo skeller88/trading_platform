@@ -116,18 +116,18 @@ class TestOpenOrderDao(unittest.TestCase):
         session, deleted = self.dao.fetch_by_db_id(self.session, to_delete_db_id)
         eq_(deleted, None)
 
-    def test_bulk_delete_by_order_index(self):
+    def test_bulk_delete_by_order_id(self):
         dto3 = copy(self.dto1)
         self.dao.bulk_save(session=self.session, commit=True,
                            popos=[self.dto1, self.dto2, dto3])
-        self.dao.bulk_delete_by_order_index(session=self.session, commit=True, popos=[self.dto1])
+        self.dao.bulk_delete_by_order_id(session=self.session, commit=True, popos=[self.dto1])
 
-        # dto1 and dto3 have the same order_index, so they both should be deleted
+        # dto1 and dto3 have the same order_id, so they both should be deleted
         session, fetched = self.dao.fetch_all(self.session)
         eq_(len(fetched), 1)
 
         self.dao.save(session=self.session, commit=True, popo=self.dto1)
-        self.dao.bulk_delete_by_order_index(session=self.session, commit=True,
+        self.dao.bulk_delete_by_order_id(session=self.session, commit=True,
                                             popos=[self.dto1, self.dto2])
 
         # all dtos should be deleted

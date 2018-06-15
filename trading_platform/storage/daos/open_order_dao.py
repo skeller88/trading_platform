@@ -9,9 +9,9 @@ class OpenOrderDao(Dao):
     def __init__(self):
         super().__init__(dto_class=SqlAlchemyOpenOrderDto)
 
-    def fetch_by_order_index(self, session, order_index):
+    def fetch_by_order_id(self, session, order_id):
         try:
-            dtos = session.query(self.dto_class).filter_by(order_index=order_index).all()
+            dtos = session.query(self.dto_class).filter_by(order_id=order_id).all()
 
             if dtos is not None:
                 return list(map(lambda dto: dto.to_popo(), dtos))
@@ -23,12 +23,12 @@ class OpenOrderDao(Dao):
             session.rollback()
             raise exception
 
-    def bulk_delete_by_order_index(self, session, flush=False, commit=False, popos=None):
-        order_indexes = map(lambda x: x.order_index, popos) if popos is not None else []
+    def bulk_delete_by_order_id(self, session, flush=False, commit=False, popos=None):
+        order_ides = map(lambda x: x.order_id, popos) if popos is not None else []
         try:
             # synchronize the session and remove objects from the session that are deleted
             # http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.delete
-            deleted_count = session.query(self.dto_class).filter(self.dto_class.order_index.in_(order_indexes)).delete(
+            deleted_count = session.query(self.dto_class).filter(self.dto_class.order_id.in_(order_ides)).delete(
                 synchronize_session='fetch')
 
             if flush:

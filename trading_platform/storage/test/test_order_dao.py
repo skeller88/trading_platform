@@ -83,18 +83,18 @@ class TestOrderDao(unittest.TestCase):
         session, fetched = self.dao.fetch_by_db_id(self.session, int(utc_timestamp()))
         eq_(fetched, None)
 
-    def test_fetch_by_order_index(self):
+    def test_fetch_by_order_id(self):
         self.dao.save(session=self.session, commit=True, popo=self.dto1)
-        fetched = self.dao.fetch_by_order_index(session=self.session, order_index=self.dto1.order_index)
+        fetched = self.dao.fetch_by_order_id(session=self.session, order_id=self.dto1.order_id)
         eq_(len(fetched), 1)
         eq_ignore_certain_fields(fetched[0], self.dto1, ['db_id', 'created_at'])
 
-    def test_fetch_earliest_with_order_index(self):
+    def test_fetch_earliest_with_order_id(self):
         self.dao.save(session=self.session, commit=True, popo=self.dto1)
         # dto2 is now the earliest
         self.dto2.processing_time = self.dto1.processing_time - 5000
         self.dao.save(session=self.session, commit=True, popo=self.dto2)
-        earliest = self.dao.fetch_earliest_with_order_index(session=self.session, order_index=self.dto2.order_index)
+        earliest = self.dao.fetch_earliest_with_order_id(session=self.session, order_id=self.dto2.order_id)
         eq_ignore_certain_fields(earliest, self.dto2, ['db_id', 'created_at'])
 
     def test_filter_processing_time_greater_than(self):

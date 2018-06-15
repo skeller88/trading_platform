@@ -1,4 +1,3 @@
-import traceback
 from abc import ABC
 from functools import wraps
 from typing import Dict, Set, Callable, Optional
@@ -40,14 +39,14 @@ class StrategyStateMachineServiceAbc(ABC):
 
         # Place orders
         def place_order(order):
-            self.logger.info('placing order id {0}'.format(order.order_id))
+            self.logger.info('placing order id {0}'.format(order.exchange_order_id))
             exchange = self.exchanges_by_id.get(order.exchange_id)
             pair = Pair(base=order.base, quote=order.quote)
 
             if order.order_side == OrderSide.buy:
-                return exchange.create_limit_buy_order(pair=pair, amount=order.amount, price=order.price)
+                return exchange.create_limit_buy_order(order=order.price)
             else:
-                return exchange.create_limit_sell_order(pair=pair, amount=order.amount, price=order.price)
+                return exchange.create_limit_sell_order(order=order.price)
 
         return map(place_order, orders)
 

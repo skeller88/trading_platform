@@ -9,18 +9,18 @@ class OrderDao(Dao):
     def __init__(self):
         super().__init__(dto_class=SqlAlchemyOrderDto)
 
-    def fetch_earliest_with_order_index(self, session, order_index):
+    def fetch_earliest_with_order_id(self, session, order_id):
         """
         Fetch the order with the earliest processing_time.
         Args:
             session:
-            order_index:
+            order_id:
 
         Returns:
 
         """
         try:
-            dto = session.query(self.dto_class).filter_by(order_index=order_index).order_by(
+            dto = session.query(self.dto_class).filter_by(order_id=order_id).order_by(
                 SqlAlchemyOrderDto.processing_time).first()
 
             if dto is not None:
@@ -33,19 +33,19 @@ class OrderDao(Dao):
             session.rollback()
             raise exception
 
-    def fetch_latest_with_order_index(self, session, order_index):
+    def fetch_latest_with_order_id(self, session, order_id):
         """
         Fetch the order with the most recent/latest processing_time. Only used in testing for now to check
         updated Order state after an arbitrage step.
         Args:
             session:
-            order_index:
+            order_id:
 
         Returns:
 
         """
         try:
-            dto = session.query(self.dto_class).filter_by(order_index=order_index).order_by(
+            dto = session.query(self.dto_class).filter_by(order_id=order_id).order_by(
                 SqlAlchemyOrderDto.processing_time.desc()).first()
 
             if dto is not None:
@@ -58,9 +58,9 @@ class OrderDao(Dao):
             session.rollback()
             raise exception
 
-    def fetch_by_order_index(self, session, order_index):
+    def fetch_by_order_id(self, session, order_id):
         try:
-            dtos = session.query(self.dto_class).filter_by(order_index=order_index).all()
+            dtos = session.query(self.dto_class).filter_by(order_id=order_id).all()
 
             if dtos is not None:
                 return list(map(lambda dto: dto.to_popo(), dtos))

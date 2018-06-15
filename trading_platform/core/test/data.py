@@ -128,7 +128,6 @@ markets = {
 }
 
 
-
 def quote_buy_and_sell_prices(exchange_service, pair):
     """
     The exchanges don't expose test order endpoints, and tests shouldn't place orders that are filled. Therefore,
@@ -170,7 +169,7 @@ def balance(exchange_id):
 
 
 def order(exchange_id=exchange_ids.bittrex, order_status=OrderStatus.open, order_side=OrderSide.buy,
-          processing_time=None, numerical_fields=True):
+          strategy_execution_id='0', processing_time=None, numerical_fields=True):
     processing_time = datetime_operations.utc_timestamp() if processing_time is None else processing_time
     kwargs = {
         # app metadata
@@ -182,11 +181,12 @@ def order(exchange_id=exchange_ids.bittrex, order_status=OrderStatus.open, order
         'created_at': None,
         'updated_at': None,
 
-        # exchange-related metadata
+        'strategy_execution_id': strategy_execution_id,
 
+        # exchange-related metadata
         'exchange_id': exchange_id,
         'event_time': processing_time - 86000,
-        'order_id': str(processing_time),
+        'exchange_order_id': str(processing_time),
         'order_type': OrderType.limit,
 
         # order metadata

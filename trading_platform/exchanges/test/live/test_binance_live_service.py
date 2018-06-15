@@ -46,7 +46,7 @@ class TestBinanceLiveService(TestLiveExchangeService):
         # Only Bittrex has a ETH balance, so no sell order is placed.
         # TODO - place sell order
         buy_amount = data.minimum_usdt_balance / quote_buy_price
-        buy_order = self.service.create_limit_buy_order(pair=self.pair, price=quote_buy_price, amount=buy_amount)
+        buy_order = self.service.create_limit_buy_order(order=quote_buy_price)
 
         try:
             # unlike in the case of bittrex, the binance response populates these values. The response
@@ -82,12 +82,12 @@ class TestBinanceLiveService(TestLiveExchangeService):
             open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order])
             assert_true(len(open_orders) >= 1)
 
-            open_buy_order = self.service.get_open_order(buy_order.order_index)
+            open_buy_order = self.service.get_open_order(buy_order.order_id)
             check_required_fields(open_buy_order)
             eq_ignore_certain_fields(open_buy_order, buy_order, fields_to_ignore=fields_to_ignore)
 
-            cancelled_buy_order = self.service.cancel_order(pair=self.pair, order_id=buy_order.order_id)
-            eq_(cancelled_buy_order.order_index, buy_order.order_index)
+            cancelled_buy_order = self.service.cancel_order(pair=self.pair, exchange_order_id=buy_order.exchange_order_id)
+            eq_(cancelled_buy_order.order_id, buy_order.order_id)
             eq_(cancelled_buy_order.order_status, OrderStatus.cancelled)
 
             sleep(self.sleep_sec_consistency)
@@ -95,12 +95,12 @@ class TestBinanceLiveService(TestLiveExchangeService):
             open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order])
             eq_(len(open_orders), 0)
 
-            open_buy_order = self.service.get_open_order(buy_order.order_index)
+            open_buy_order = self.service.get_open_order(buy_order.order_id)
             assert (open_buy_order is None)
         # clean up any placed orders even if there's an exception.
         finally:
             try:
-                self.service.cancel_order(pair=self.pair, order_id=buy_order.order_id)
+                self.service.cancel_order(pair=self.pair, exchange_order_id=buy_order.exchange_order_id)
             # will throw an exception if order was already cancelled
             except Exception:
                 pass

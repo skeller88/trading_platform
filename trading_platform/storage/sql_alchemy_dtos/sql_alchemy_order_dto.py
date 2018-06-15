@@ -46,9 +46,9 @@ class SqlAlchemyOrderDto(Base):
     __tablename__ = 'orders'
     # primary keys and indexes
     db_id = Column(BigInteger, autoincrement=True, primary_key=True)
-    order_index = Column(String, index=True, nullable=False)
+    order_id = Column(String, index=True, nullable=False)
     processing_time = Column(Float, index=True, nullable=False)
-    exchange_id = Column(Integer, index=True, nullable=False)
+    strategy_execution_id = Column(String, index=True, nullable=False)
 
     # app metadata
     version = Column(Integer, nullable=False)
@@ -58,9 +58,14 @@ class SqlAlchemyOrderDto(Base):
     updated_at = Column(Float, onupdate=utc_timestamp, nullable=True)
 
     # exchange-related metadata
-    order_id = Column(String, nullable=False)
-    order_type = Column(Integer, nullable=True)
+    exchange_id = Column(Integer, nullable=False)
+    exchange_order_id = Column(String, nullable=True)
     event_time = Column(Float, nullable=True)
+    order_type = Column(Integer, nullable=True)
+    base = Column(String(15), nullable=False)
+    quote = Column(String(15), nullable=False)
+    order_status = Column(Integer, nullable=False)
+    order_side = Column(Integer, nullable=True)
 
     # order numerical data
     amount = Column(Numeric, nullable=True)
@@ -68,15 +73,9 @@ class SqlAlchemyOrderDto(Base):
     price = Column(Numeric, nullable=True)
     remaining = Column(Numeric, nullable=True)
 
-    # order metadata
-    base = Column(String(15), nullable=False)
-    quote = Column(String(15), nullable=False)
-    order_status = Column(Integer, nullable=False)
-    order_side = Column(Integer, nullable=True)
-
     def __repr__(self):
-        return "<SqlAlchemyOrderDto(db_id='%s', order_index='%s', order_status='%s')>" % (
-            self.db_id, self.order_index, self.order_status)
+        return "<SqlAlchemyOrderDto(db_id='%s', order_id='%s', order_status='%s')>" % (
+            self.db_id, self.order_id, self.order_status)
 
     def to_popo(self):
         params = {
@@ -86,15 +85,16 @@ class SqlAlchemyOrderDto(Base):
 
             # database metadata
             'db_id': self.db_id,
-            'order_index': self.order_index,
+            'order_id': self.order_id,
             'created_at': self.created_at,
             'updated_at': self.updated_at,
 
-            # exchange-related metadata
+            'strategy_execution_id': self.strategy_execution_id,
 
+            # exchange-related metadata
             'exchange_id': self.exchange_id,
             'event_time': self.event_time,
-            'order_id': self.order_id,
+            'exchange_order_id': self.exchange_order_id,
             'order_type': self.order_type,
 
             # order numerical data
@@ -121,15 +121,16 @@ class SqlAlchemyOrderDto(Base):
 
             # database metadata
             db_id=popo.db_id,
-            order_index=popo.order_index,
+            order_id=popo.order_id,
             created_at=popo.created_at,
             updated_at=popo.updated_at,
 
-            # exchange-related metadata
+            strategy_execution_id=popo.strategy_execution_id,
 
+            # exchange-related metadata
             exchange_id=popo.exchange_id,
             event_time=popo.event_time,
-            order_id=popo.order_id,
+            exchange_order_id=popo.exchange_order_id,
 
             # order numerical data
             amount=popo.amount,

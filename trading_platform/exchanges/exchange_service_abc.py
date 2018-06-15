@@ -27,33 +27,35 @@ class ExchangeServiceAbc(ABC):
     ###########################################
 
     @abstractmethod
-    def cancel_order(self, order_id, pair):
+    def cancel_order(self, exchange_order_id, pair):
         """
-        :param order_id: str
+        :param exchange_order_id: str
         :param pair: Pair
         :return:
         """
         pass
 
     @abstractmethod
-    def create_limit_buy_order(self, pair, amount, price, params=None):
+    def create_limit_buy_order(self, order, params=None):
         """
         :param pair: Pair
         :param amount: float
-        :param price: float
+        :param order: float
         :param params:
         :return:
+
         """
         pass
 
     @abstractmethod
-    def create_limit_sell_order(self, pair, amount, price, params=None):
+    def create_limit_sell_order(self, order, params=None):
         """
         :param pair: Pair
         :param amount: float
-        :param price: float
+        :param order: float
         :param params:
         :return:
+
         """
         pass
 
@@ -62,7 +64,7 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def fetch_order(self, order_id: str, symbol: str) -> Optional[Order]:
+    def fetch_order(self, exchange_order_id: str, symbol: str) -> Optional[Order]:
         pass
 
     @abstractmethod

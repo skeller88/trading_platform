@@ -4,7 +4,6 @@ from time import sleep
 import ccxt
 import requests
 import urllib3
-from ccxt import InvalidOrder
 
 # Exchanges are flakey. Hardcode the max number of retries for now
 MAX_RETRIES = 3
@@ -12,7 +11,8 @@ MAX_RETRIES = 3
 SLEEP_SEC_BETWEEN_RETRIES = 3
 
 
-def make_api_request(err_msg, method, *args):
+def make_api_request(method, *args):
+    print('executing {0}'.format(method.__name__))
     recent_error = None
     for retry in range(MAX_RETRIES):
         if retry > 0:
@@ -28,21 +28,22 @@ def make_api_request(err_msg, method, *args):
                 urllib3.exceptions.ReadTimeoutError
                 ) as request_error:
             recent_error = request_error
-            print(err_msg)
+            print('error when executing {0}'.format(method.__name__))
             traceback.print_exc()
             continue
     else:
         raise recent_error
 
 
-def make_api_limit_order_request(err_msg, method, symbol, amount, price, *params):
+def make_api_limit_order_request(method, symbol, amount, price, params):
+    print('executing {0}'.format(method.__name__))
     recent_error = None
     for retry in range(MAX_RETRIES):
         if retry > 0:
             sleep(SLEEP_SEC_BETWEEN_RETRIES)
             print('retry attempt number {0}'.format(retry))
         try:
-            return method(symbol, amount, price, *params)
+            return method(symbol, amount, price, params)
         except (requests.HTTPError,
                 ccxt.DDoSProtection,
                 ccxt.ExchangeError,
@@ -52,7 +53,7 @@ def make_api_limit_order_request(err_msg, method, symbol, amount, price, *params
                 urllib3.exceptions.ReadTimeoutError
                 ) as request_error:
             recent_error = request_error
-            print(err_msg)
+            print('error when executing {0}'.format(method.__name__))
             traceback.print_exc()
             continue
     else:

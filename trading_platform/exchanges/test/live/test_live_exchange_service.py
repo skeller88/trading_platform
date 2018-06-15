@@ -36,7 +36,6 @@ class TestLiveExchangeService(unittest.TestCase):
         cls.engine.initialize_tables()
         cls.session = cls.engine.scoped_session_maker()
         cls.balance_dao = BalanceDao()
-        cls.session = cls.engine.scoped_session_maker()
         # credentials = exchange_service_credentials_for_exchange(cls.live_service_class, param_name=test_exchange_credentials_param)
         credentials = exchange_service_credentials_for_exchange(cls.live_service_class, param_name=exchange_credentials_param)
         withdrawal_fees = pandas.DataFrame(

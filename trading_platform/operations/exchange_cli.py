@@ -6,6 +6,7 @@ Interact with exchanges without logging in or running tests. Common operations i
 """
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
+from trading_platform.exchanges.data.financial_data import FinancialData
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.live import live_subclasses
 
@@ -23,10 +24,10 @@ def cancel_orders():
 
     for exchange in exchange_services_by_id.values():
         open_orders = exchange.fetch_open_orders()
-        for order_index, order in open_orders.items():
-            print('Cancelling order', order_index)
+        for order_id, order in open_orders.items():
+            print('Cancelling order', order_id)
             exchange.cancel_order(pair=Pair(base=order.base, quote=order.quote),
-                                  order_id=order.order_id)
+                                  exchange_order_id=order.exchange_order_id)
 
 
 def fetch_balances():
@@ -42,9 +43,11 @@ def fetch_balances():
         for currency, balance in balances.items():
             print(currency, balance.free)
 
-
-# print(execute(exchange_ids.bittrex, 'fetch_deposit_destination', currency='ZEN', params={}))
-print(bittrex.fetch_order_book(symbol=Pair(base='BTC', quote='ETH').name_for_exchange_clients, limit=None, params={}))
+pair = Pair(base='USDT', quote='BTC')
+order = bittrex.create_conditional_order(order_side=OrderSide.sell, pair=pair, target=FinancialData(8000),
+                                       amount=FinancialData(0.05), condition_type='LESS_THAN')
+print(order)
+# print(bittrex.fetch_order_book(symbol=Pair(base='BTC', quote='ETH').name_for_exchange_clients, limit=None, params={}))
 
 # Uncomment the desired operation
 # cancel_orders()
@@ -53,6 +56,6 @@ print(bittrex.fetch_order_book(symbol=Pair(base='BTC', quote='ETH').name_for_exc
 # fetch_closed_orders()
 
 
-# order = fetch_order(order_id=19269522, symbol=Pair(base='ETH', quote='OMG').name_for_exchange_clients, exchange_id=exchange_ids.binance)
+# order = fetch_order(exchange_order_id=19269522, symbol=Pair(base='ETH', quote='OMG').name_for_exchange_clients, exchange_id=exchange_ids.binance)
 # for k, v in order.items():
 #     print(k, v, '\n')
