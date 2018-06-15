@@ -277,7 +277,7 @@ class LiveExchangeService(ExchangeServiceAbc):
     # Account state
     ###########################################
 
-    def get_balance(self, currency):
+    def get_balance(self, currency) -> Optional[Balance]:
         """
          Returns free balance from balances data structure. Does not cause a HTTP request so the Balance returned
          may be outdated.
@@ -286,8 +286,7 @@ class LiveExchangeService(ExchangeServiceAbc):
 
          Returns FinancialData: currency balance free to trade
          """
-        balance = self.__balances.get(currency)
-        return balance.free if balance is not None else zero
+        return self.__balances.get(currency)
 
     def fetch_balances(self) -> Dict[str, Balance]:
         """

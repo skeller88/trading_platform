@@ -17,10 +17,9 @@ See an example here http://python-3-patterns-idioms-test.readthedocs.io/en/lates
 """
 import datetime
 from collections import defaultdict
+from decimal import Decimal
 from functools import reduce
 from heapq import heappush, heappop
-
-from decimal import Decimal
 from typing import Dict, Optional
 
 from trading_platform.exchanges.data.balance import Balance
@@ -41,7 +40,7 @@ from trading_platform.utils.logging import print_if_debug_enabled
 insufficient_funds = "Insufficient Funds"
 
 
-class BacktestService(ExchangeServiceAbc):
+class BacktestExchangeService(ExchangeServiceAbc):
     def __init__(self, exchange_id, trade_fee, withdrawal_fees, echo):
         """
         Args:
@@ -239,18 +238,40 @@ class BacktestService(ExchangeServiceAbc):
 
     def buy_all(self, pair, price):
         amount = FinancialData(self.__balances[pair.base] / (price * (one + self.trade_fee)))
-        return self.create_limit_buy_order()
+
+        order: Order = Order(**{
+            'base': pair.base,
+            'quote': pair.quote,
+
+            'price': price,
+            'amount': amount,
+            'order_side': OrderSide.buy
+        })
+        return self.create_limit_buy_order(order)
 
     def sell_all(self, pair, price):
-        return self.create_limit_sell_order(price)
+        quote_balance: Balance = self.get_balance(pair.quote)
+
+        amount: FinancialData = quote_balance.free
+        order: Order = Order(**{
+            'base': pair.base,
+            'quote': pair.quote,
+
+            'price': price,
+            'amount': amount,
+            'order_side': OrderSide.sell
+        })
+
+        return self.create_limit_sell_order(order)
 
     ###########################################
     # Account state
     ###########################################
-    def get_balance(self, currency):
+    def get_balance(self, currency) -> Optional[Balance]:
         total = self.__balances[currency]
 
-        return Balance(currency=currency, total=total)
+        if total is not None:
+            return Balance(currency=currency, total=total, free=total, locked=zero)
 
     def fetch_balances(self) -> Dict[str, Balance]:
         """

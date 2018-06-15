@@ -150,8 +150,8 @@ class TestOrderExecutionService(unittest.TestCase):
         executed_orders: Dict[str, Order] = self.order_execution_service.execute_order_set(order_set, self.session,
                                                                                            write_pending_order=True)
         eq_(len(executed_orders.values()), len(order_set))
-        session, orders = self.order_dao.fetch_all(self.session)
-        # eq_(len(self.order_dao.fetch_all(self.session)), len(order_set) * 2)
+        orders = self.order_dao.fetch_all(self.session)
+        eq_(len(self.order_dao.fetch_all(self.session)), len(order_set) * 2)
 
         # Wait for writes to happen to the database. TODO - use a callback instead
         if multithreaded:
@@ -180,7 +180,7 @@ class TestOrderExecutionService(unittest.TestCase):
         eq_(order_executed.order_status, OrderStatus.open)
 
         # compare order with order returned from the database
-        session, orders = self.order_dao.fetch_all(self.session)
+        orders = self.order_dao.fetch_all(self.session)
 
         num_orders_written = 2 if write_pending_order else 1
         expected_order_statuses = [OrderStatus.pending, OrderStatus.open] if write_pending_order else [OrderStatus.open]

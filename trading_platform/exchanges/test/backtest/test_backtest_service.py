@@ -6,12 +6,14 @@ import unittest
 from copy import deepcopy
 
 import pandas
-from nose.tools import eq_, assert_greater, assert_almost_equal
+from nose.tools import eq_, assert_greater, assert_almost_equal, raises
 
 from trading_platform.core.test.data import Defaults, eth_withdrawal_fee
-from trading_platform.exchanges.backtest.backtest_service import BacktestService
+from trading_platform.exchanges.backtest.backtest_exchange_service import BacktestExchangeService
 from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.financial_data import one, two, FinancialData, zero
+from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.utils.exceptions import InsufficientFundsException
 
@@ -38,7 +40,7 @@ class TestBacktestService(unittest.TestCase):
             }
         ])
         withdrawal_fees.set_index('currency', inplace=True)
-        self.te = BacktestService(exchange_id=exchange_ids.binance, trade_fee=self.trade_fee,
+        self.te = BacktestExchangeService(exchange_id=exchange_ids.binance, trade_fee=self.trade_fee,
                                   withdrawal_fees=withdrawal_fees, echo=False)
         self.te.deposit_immediately(self.base, self.initial_base_capital)
         self.te.deposit_immediately(self.quote, self.initial_quote_capital)
@@ -68,7 +70,17 @@ class TestBacktestService(unittest.TestCase):
         prev_wallet_quote = self.te.get_balance(self.quote).total
         eq_(self.te.get_buy_price(self.pair.name), self.initial_ticker)
         new_price = self.initial_ticker * FinancialData(.5)
-        self.te.create_limit_buy_order()
+
+        buy_order: Order = Order(**{
+            'base': self.base,
+            'quote': self.quote,
+
+            'amount': quote_amount_to_buy,
+            'price': new_price,
+            'order_side': OrderSide.buy
+        })
+
+        self.te.create_limit_buy_order(buy_order)
         eq_(self.te.get_buy_price(self.pair.name), new_price)
         eq_(self.te.get_balance(self.quote).total, prev_wallet_quote + quote_amount_to_buy)
         eq_(self.te.get_balance(self.base).total,
@@ -106,12 +118,19 @@ class TestBacktestService(unittest.TestCase):
         assert (quote_purchased.amount > 0)
         assert (self.te.get_balance(self.quote).total > prev_wallet_quote)
 
+    @raises(InsufficientFundsException)
     def test_create_limit_buy_order_insufficient_funds(self):
-        try:
-            self.te.create_limit_buy_order()
-            raise Exception("Should have thrown an exception")
-        except InsufficientFundsException:
-            pass
+        quote_value_of_base: FinancialData = self.te.get_balance(self.base).free / self.price
+        buy_order: Order = Order(**{
+            'base': self.base,
+            'quote': self.quote,
+
+            'amount': quote_value_of_base * two,
+            'price': self.price,
+            'order_side': OrderSide.sell
+        })
+
+        self.te.create_limit_buy_order(buy_order)
 
     def test_sell_no_capital_gains_or_losses(self):
         prev_wallet_base = self.te.get_balance(self.base).total
@@ -119,11 +138,20 @@ class TestBacktestService(unittest.TestCase):
         # divide so that we can confirm division doesn't cause any rounding errors
         quote_to_sell = self.te.get_balance(self.quote).total / two
 
-        sell_order = self.te.create_limit_sell_order(self.price, None)
-        quote_sold_after_fees = sell_order.amount * (one - self.te.trade_fee)
-        assert_almost_equal(self.te.get_balance(self.base).total, prev_wallet_base + quote_sold_after_fees * sell_order.price,
+        sell_order: Order = Order(**{
+            'base': self.base,
+            'quote': self.quote,
+
+            'amount': quote_to_sell,
+            'price': self.price,
+            'order_side': OrderSide.sell
+        })
+
+        sell_order_executed: Order = self.te.create_limit_sell_order(sell_order, None)
+        quote_sold_after_fees = sell_order_executed.amount * (one - self.te.trade_fee)
+        assert_almost_equal(self.te.get_balance(self.base).total, prev_wallet_base + quote_sold_after_fees * sell_order_executed.price,
                             places=FinancialData.four_places)
-        assert (self.te.get_balance(self.quote).total == prev_wallet_quote - sell_order.amount)
+        assert (self.te.get_balance(self.quote).total == prev_wallet_quote - sell_order_executed.amount)
         assert (self.te.capital_gains == 0)
         assert (self.te.capital_losses == 0)
 
@@ -134,11 +162,20 @@ class TestBacktestService(unittest.TestCase):
         buy_price = self.te.get_buy_price(self.pair.name)
         sell_price = buy_price * (one + FinancialData(.01))
 
-        sell_order = self.te.create_limit_sell_order(sell_price, None)
-        quote_sold_after_fees = sell_order.amount * (one - self.te.trade_fee)
+        sell_order: Order = Order(**{
+            'base': self.base,
+            'quote': self.quote,
+
+            'amount': quote_to_sell,
+            'price': sell_price,
+            'order_side': OrderSide.sell
+        })
+
+        sell_order_executed = self.te.create_limit_sell_order(sell_order, None)
+        quote_sold_after_fees = sell_order_executed.amount * (one - self.te.trade_fee)
         assert_almost_equal(self.te.get_balance(self.base).total, prev_wallet_base + quote_sold_after_fees * sell_price, places=FinancialData.four_places)
-        eq_(self.te.get_balance(self.quote).total, prev_wallet_quote - sell_order.amount)
-        eq_(self.te.capital_gains, (sell_price - buy_price) * sell_order.amount * self.te.usdt_tickers[self.base])
+        eq_(self.te.get_balance(self.quote).total, prev_wallet_quote - sell_order_executed.amount)
+        eq_(self.te.capital_gains, (sell_price - buy_price) * sell_order_executed.amount * self.te.usdt_tickers[self.base])
         assert_greater(self.te.capital_gains, 0)
         eq_(self.te.capital_losses, 0)
 
@@ -149,13 +186,22 @@ class TestBacktestService(unittest.TestCase):
         buy_price = self.te.get_buy_price(self.pair.name)
         sell_price = buy_price * (one - FinancialData(.01))
 
-        sell_order = self.te.create_limit_sell_order(sell_price, None)
-        quote_sold_after_fees = sell_order.amount * (one - self.te.trade_fee)
+        sell_order: Order = Order(**{
+            'base': self.base,
+            'quote': self.quote,
+
+            'amount': quote_to_sell,
+            'price': sell_price,
+            'order_side': OrderSide.sell
+        })
+
+        sell_order_executed = self.te.create_limit_sell_order(sell_order, None)
+        quote_sold_after_fees = sell_order_executed.amount * (one - self.te.trade_fee)
         assert_almost_equal(self.te.get_balance(self.base).total, prev_wallet_base + quote_sold_after_fees * sell_price,
                             places=FinancialData.four_places)
-        eq_(self.te.get_balance(self.quote).total, prev_wallet_quote - sell_order.amount)
+        eq_(self.te.get_balance(self.quote).total, prev_wallet_quote - sell_order_executed.amount)
         eq_(self.te.capital_gains, 0)
-        eq_(self.te.capital_losses, abs(sell_price - buy_price) * sell_order.amount * self.te.usdt_tickers[self.base])
+        eq_(self.te.capital_losses, abs(sell_price - buy_price) * sell_order_executed.amount * self.te.usdt_tickers[self.base])
         assert_greater(self.te.capital_losses, 0)
 
     @unittest.skip('BacktestService.below_min_base_order_value() not implemented yet.')

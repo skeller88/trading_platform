@@ -127,7 +127,7 @@ class ExchangeServiceAbc(ABC):
     ###########################################
 
     @abstractmethod
-    def get_balance(self, currency):
+    def get_balance(self, currency) -> Optional[Balance]:
         pass
 
     @abstractmethod
