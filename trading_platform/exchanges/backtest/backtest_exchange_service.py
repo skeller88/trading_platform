@@ -16,6 +16,8 @@ opinion is that multiple composition is more flexible and a bit easier to reason
 See an example here http://python-3-patterns-idioms-test.readthedocs.io/en/latest/Fronting.html
 """
 import datetime
+import math
+import random
 from collections import defaultdict
 from decimal import Decimal
 from functools import reduce
@@ -84,7 +86,10 @@ class BacktestExchangeService(ExchangeServiceAbc):
         # in a priority queue sorted by the timestamp at which the deposit will be available, and update the balance
         # with the deposit once the timestamp has been reached.
         self.__pending_deposits = []
-        self.__tickers = {}
+        # Keep track of orders that have been placed, and manipulate their state to simulate different outcomes
+        # of create_limit_*_order calls.
+        self.orders = {}
+        self.tickers = {}
 
         self.echo = echo
 
@@ -125,13 +130,13 @@ class BacktestExchangeService(ExchangeServiceAbc):
             pair_name: str = Pair.name_for_base_and_quote(base=base, quote=quote)
             self.__buy_prices[pair_name] = price
 
-            return Order(**{
+            order: Order = Order(**{
                 'strategy_execution_id': order.strategy_execution_id,
 
                 # exchange-related data
                 'exchange_id': self.exchange_id,
                 'order_type': OrderType.limit,
-                'exchange_order_id': str(utc_timestamp()),
+                'exchange_order_id': self.new_exchange_order_id(),
 
                 # numerical data
                 'amount': amount,
@@ -143,6 +148,8 @@ class BacktestExchangeService(ExchangeServiceAbc):
                 'order_status': OrderStatus.open,
                 'order_side': OrderSide.buy
             })
+            self.orders[order.exchange_order_id] = order
+            return order
         else:
             raise InsufficientFundsException('{0} base needed to buy {1} of quote, only {2} base available'.format(
                 base_plus_fees, amount, self.__balances[base]))
@@ -170,7 +177,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
             # exchange-related data
             'exchange_id': self.exchange_id,
             'order_type': OrderType.limit,
-            'exchange_order_id': str(utc_timestamp()),
+            'exchange_order_id': None,
 
             # numerical data
             'amount': amount,
@@ -202,13 +209,13 @@ class BacktestExchangeService(ExchangeServiceAbc):
             else:
                 self.capital_losses += abs(gross_usdt)
 
-            return Order(**{
+            order: Order = Order(**{
                 'strategy_execution_id': order.strategy_execution_id,
 
                 # exchange-related data
                 'exchange_id': self.exchange_id,
                 'order_type': OrderType.limit,
-                'exchange_order_id': str(utc_timestamp()),
+                'exchange_order_id': self.new_exchange_order_id(),
 
                 # numerical data
                 'amount': amount,
@@ -221,6 +228,8 @@ class BacktestExchangeService(ExchangeServiceAbc):
                 'order_status': OrderStatus.open,
                 'order_side': OrderSide.sell
             })
+            self.orders[order.exchange_order_id] = order
+            return order
 
         else:
             # print('Could not sell', insufficient_funds)
@@ -228,13 +237,15 @@ class BacktestExchangeService(ExchangeServiceAbc):
                 amount, self.__balances[quote]))
 
     def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
-        return {}
+        return {order.order_id: order for order in self.orders if
+                order.order_status in [OrderStatus.filled, OrderStatus.cancelled,
+                                       OrderStatus.cancelled_and_partially_filled]}
 
     def fetch_open_orders(self, symbol=None) -> Dict[str, Order]:
-        return {}
+        return {order.order_id: order for order in self.orders if order.order_status == OrderStatus.open}
 
-    def fetch_order(self, exchange_order_id: str, symbol: str) -> Optional[Order]:
-        pass
+    def fetch_order(self, exchange_order_id: str, pair: Pair) -> Optional[Order]:
+        return self.orders.get(exchange_order_id)
 
     def buy_all(self, pair, price):
         amount = FinancialData(self.__balances[pair.base] / (price * (one + self.trade_fee)))
@@ -264,11 +275,21 @@ class BacktestExchangeService(ExchangeServiceAbc):
 
         return self.create_limit_sell_order(order)
 
+    @staticmethod
+    def new_exchange_order_id() -> str:
+        """
+        Use a stringified integer right now to make debugging easier
+        Returns:
+
+        """
+        return str(random.randint(0, 900000))
+
     ###########################################
     # Account state
     ###########################################
     def get_balance(self, currency) -> Balance:
-        total: FinancialData = self.__balances[currency]
+        total: FinancialData \
+            = self.__balances[currency]
 
         return Balance(currency=currency, total=total, free=total,
                        locked=zero) if total is not None else Balance.instance_with_zero_value_fields()
@@ -427,16 +448,16 @@ class BacktestExchangeService(ExchangeServiceAbc):
         Unlike LiveExchangeService, doesn't return latest tickers.
         :return list Ticker:
         """
-        return self.__tickers.values()
+        return self.tickers.values()
 
     def set_tickers(self, tickers):
-        self.__tickers = tickers
+        self.tickers = tickers
 
     def get_ticker(self, pair_name):
-        return self.__tickers.get(pair_name)
+        return self.tickers.get(pair_name)
 
     def get_tickers(self) -> Dict[str, Ticker]:
-        return self.__tickers
+        return self.tickers
 
     def fetch_order_book(self, symbol, limit=None, params={}):
         raise NotImplementedError

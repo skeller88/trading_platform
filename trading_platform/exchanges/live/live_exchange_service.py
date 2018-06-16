@@ -37,7 +37,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         self.exchange_name = exchange_name
         self.__client = client
         self.__balances = {}
-        self.__open_orders = {}
+        self.__orders= {}
         self.__tickers = {}
         self.__withdrawal_fees = withdrawal_fees
 
@@ -101,11 +101,11 @@ class LiveExchangeService(ExchangeServiceAbc):
     def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
         return self.__client.fetch_closed_orders(symbol, since, limit, params)
 
-    def fetch_order(self, exchange_order_id=None, symbol=None) -> Optional[Order]:
-        return self.__client.fetch_order(id=exchange_order_id, symbol=symbol)
+    def fetch_order(self, exchange_order_id=None, pair=None) -> Optional[Order]:
+        return self.__client.fetch_order(id=exchange_order_id, symbol=pair.name_for_exchange_clients)
 
-    def fetch_orders(self, symbol=None):
-        return self.__client.fetch_orders(symbol)
+    def fetch_orders(self, pair=None):
+        return self.__client.fetch_orders(pair.name_for_exchange_clients)
 
     def fetch_open_orders(self, symbol=None) -> Dict[str, Order]:
         """
@@ -117,7 +117,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         Returns:
 
         """
-        self.__open_orders = {}
+        self.__orders= {}
         self.__client.load_markets()
         try:
             self.__client.verbose = True
@@ -127,17 +127,17 @@ class LiveExchangeService(ExchangeServiceAbc):
             order_data_list = None
 
         if order_data_list is None:
-            return self.__open_orders
+            return self.__orders
 
         for order_data in order_data_list:
             standardized = Order.standardize_exchange_data(order_data, self.exchange_id)
             order = Order(**standardized)
-            self.__open_orders[order.order_id] = order
+            self.__orders[order.order_id] = order
 
-        return self.__open_orders
+        return self.__orders
 
     def get_open_order(self, order_id) -> Optional[Order]:
-        return self.__open_orders.get(order_id)
+        return self.__orders.get(order_id)
 
     ###########################################
     # Account State

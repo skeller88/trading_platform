@@ -4,9 +4,13 @@ Interact with exchanges without logging in or running tests. Common operations i
 - Checking balances
 - Placing orders
 """
+from typing import Dict
+
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
+from trading_platform.exchanges.data.enums.order_type import OrderType
 from trading_platform.exchanges.data.financial_data import FinancialData
+from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.live import live_subclasses
 
@@ -43,16 +47,36 @@ def fetch_balances():
         for currency, balance in balances.items():
             print(currency, balance.free)
 
-pair = Pair(base='USDT', quote='BTC')
-order = bittrex.create_conditional_order(order_side=OrderSide.sell, pair=pair, target=FinancialData(8000),
-                                       amount=FinancialData(0.05), condition_type='LESS_THAN')
-print(order)
+pair = Pair(base='BTC', quote='NEO')
+order: Order = Order(**{
+    # app metadata
+    'version': Order.current_version,
+
+    # exchange-related metadata
+    'exchange_id': exchange_ids.bittrex,
+    'order_type': OrderType.limit,
+    'order_side': OrderSide.buy,
+
+    # order metadata
+    'base': pair.base,
+    'quote': pair.quote,
+
+    'amount': FinancialData(3),
+    'price': FinancialData(0.00689211)
+})
+# order = bittrex.create_limit_buy_order(order=order)
+# print(order)
+list(map(lambda x: print(x[0], x[1]), bittrex.fetch_orders(pair).items()))
+
+
+
+# list(map(lambda x: print(x[0], x[1].free), bittrex.fetch_balances().items()))
+
 # print(bittrex.fetch_order_book(symbol=Pair(base='BTC', quote='ETH').name_for_exchange_clients, limit=None, params={}))
 
 # Uncomment the desired operation
 # cancel_orders()
 # fetch_balances()
-# create_limit_order(exchange_ids.binance, order_side=OrderSide.sell, pair=Pair(base='ETH', quote='OMG'), price=FinancialData(0.01), amount=2.7972)
 # fetch_closed_orders()
 
 

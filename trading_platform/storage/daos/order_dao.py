@@ -48,7 +48,7 @@ class OrderDao(Dao):
         """
         try:
             dto = session.query(self.dto_class).filter_by(order_id=order_id).order_by(
-                SqlAlchemyOrderDto.processing_time.desc()).first()
+                SqlAlchemyOrderDto.order_status.desc(), SqlAlchemyOrderDto.processing_time.desc()).first()
 
             if dto is not None:
                 return dto.to_popo()

@@ -22,7 +22,6 @@ class TestOrderDao(TestDao):
         self.dto1 = data.order(exchange_ids.binance)
         self.dto2 = data.order(exchange_ids.bittrex, processing_time=self.dto1.processing_time + 5000.)
 
-
     def test_fetch_by_order_id(self):
         self.dao.save(session=self.session, commit=True, popo=self.dto1)
         fetched = self.dao.fetch_by_order_id(session=self.session, order_id=self.dto1.order_id)

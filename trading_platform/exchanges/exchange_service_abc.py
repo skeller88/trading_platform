@@ -6,6 +6,7 @@ from typing import Dict, Optional
 from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.deposit_destination import DepositDestination
 from trading_platform.exchanges.data.order import Order
+from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.ticker import Ticker
 
 
@@ -65,7 +66,7 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def fetch_order(self, exchange_order_id: str, symbol: str) -> Optional[Order]:
+    def fetch_order(self, exchange_order_id: str, pair: Pair) -> Optional[Order]:
         pass
 
     @abstractmethod
@@ -157,6 +158,10 @@ class ExchangeServiceAbc(ABC):
 
     @abstractmethod
     def get_tickers(self) -> Dict[str, Ticker]:
+        pass
+
+    @abstractmethod
+    def get_ticker(self) -> Optional[Ticker]:
         pass
 
     @staticmethod
