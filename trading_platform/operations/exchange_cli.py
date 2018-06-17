@@ -69,10 +69,13 @@ order: Order = Order(**{
 
 # order = bittrex.create_limit_buy_order(order=order)
 # print(order.exchange_order_id)
-exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7'
-order = bittrex.fetch_order(exchange_order_id=exchange_order_id, pair=pair)
+# exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7'
+# order = bittrex.fetch_order(exchange_order_id=exchange_order_id, pair=pair)
 
-list(map(lambda x: print(x[0], x[1]), order.items()))
+# print(bittrex.fetch_open_orders(pair=pair))
+print(bittrex.fetch_closed_orders())
+
+# list(map(lambda x: print(x[0], x[1]), order.items()))
 # list(map(lambda x: print(x[0], x[1].free), bittrex.fetch_balances().items()))
 
 
