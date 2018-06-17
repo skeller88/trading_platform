@@ -126,44 +126,6 @@ bittrex_limit_sell_order = {
     'status': 'open'
 }
 
-# TODO - compare return values with fetch_order
-bittrex_fetch_open_orders = [
-    {
-        'info': {
-            'Uuid': None,
-            'OrderUuid': '681ae323-7345-4586-acfd-d4b20fbef0bf',
-            'Exchange': 'BTC-NEO',
-            'OrderType': 'LIMIT_BUY',
-            'Quantity': 3.0,
-            'QuantityRemaining': 3.0,
-            'Limit': 0.00489211,
-            'CommissionPaid': 0.0,
-            'Price': 0.0,
-            'PricePerUnit': None,
-            'Opened': '2018-06-16T23:51:22.44',
-            'Closed': None,
-            'CancelInitiated': False,
-            'ImmediateOrCancel': False,
-            'IsConditional': False,
-            'Condition': 'NONE',
-            'ConditionTarget': None},
-        'id': '681ae323-7345-4586-acfd-d4b20fbef0bf',
-        'timestamp': 1529193082044,
-        'datetime': '2018-06-16T23:51:22.440Z',
-        'lastTradeTimestamp': None,
-        'symbol': 'NEO/BTC',
-        'type': 'limit',
-        'side': 'buy',
-        'price': 0.00489211,
-        'cost': 0.01467633,
-        'average': None,
-        'amount': 3.0,
-        'filled': 0.0,
-        'remaining': 3.0,
-        'status': 'open',
-        'fee': {'cost': 0.0,
-                'currency': 'BTC'}}]
-
 bittrex_fetch_order_open_status = {
     'info':
         {'AccountId': None,
@@ -206,7 +168,7 @@ bittrex_fetch_order_open_status = {
     'fee': {'cost': 0.0,
             'currency': 'BTC'}}
 
-# Same as open order except for the following:
+# Same format as open order response except for the following:
 bittrex_fetch_order_filled_status = {
     'info': {
         'QuantityRemaining': 0.0,
@@ -226,7 +188,7 @@ bittrex_fetch_order_filled_status = {
     'fee': {'cost': 4.381e-05,
             'currency': 'BTC'}}
 
-# Same as above except for the following:
+# Same format as open order response except for the following:
 bittrex_fetch_order_cancelled_status = {
     'info': {
         'Closed': '2018-06-16T23:57:20.787',
@@ -237,6 +199,7 @@ bittrex_fetch_order_cancelled_status = {
     'lastTradeTimestamp': 1529193440787,
     'status': 'canceled'}
 
+# List[Dict]. Each Dict is same format as open order response except for the following:
 bittrex_closed_orders = [
     {
         # Missing the following fields: AccountId, Reserved, ReserveRemaining, CommissionReserved,
@@ -253,6 +216,15 @@ bittrex_closed_orders = [
     }
 ]
 
+bittrex_fetch_open_orders = [
+    {
+        # Missing the following fields: AccountId, Reserved, ReserveRemaining, CommissionReserved,
+        # CommissionReserveRemaining, IsOpen, Sentinel, CancelInitiated
+        # Unlike fetch_closed_orders, is not missing the CancelInitiated or the CommissionPaid fields
+        'info': {
+            'Uuid': None,
+            }
+    }]
 
 bittrex_ticker = {'symbol': 'ZEC/USDT',
                   'timestamp': 1524789534807,
