@@ -12,6 +12,7 @@ import pandas
 from nose.tools import eq_, assert_true, assert_greater
 
 from trading_platform.core.test.data import Defaults
+from trading_platform.core.test.util_methods import disable_debug_logging
 from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.financial_data import zero
@@ -32,7 +33,8 @@ class TestLiveExchangeService(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.pair = Pair(base='USDT', quote='ETH')
+        disable_debug_logging()
+        cls.pair = Pair(base='USDT', quote='BTC')
         cls.engine = SqlAlchemyEngine.local_engine_maker()
         cls.engine.initialize_tables()
         cls.session = cls.engine.scoped_session_maker()
@@ -119,6 +121,6 @@ class TestLiveExchangeService(unittest.TestCase):
         open_orders = {}
 
         for order in order_instances:
-            open_orders.update(exchange_service.fetch_open_orders(Pair(base=order.base, quote=order.quote).name_for_exchange_clients))
+            open_orders.update(exchange_service.fetch_open_orders(Pair(base=order.base, quote=order.quote)))
 
         return open_orders

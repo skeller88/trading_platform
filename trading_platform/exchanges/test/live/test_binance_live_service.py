@@ -94,7 +94,7 @@ class TestBinanceLiveService(TestLiveExchangeService):
             open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order])
             assert_true(len(open_orders) >= 1)
 
-            open_buy_order = self.service.get_open_order(buy_order.order_id)
+            open_buy_order = self.service.get_order(buy_order.order_id)
             check_required_fields(open_buy_order)
             eq_ignore_certain_fields(open_buy_order, buy_order, fields_to_ignore=fields_to_ignore)
 
@@ -107,7 +107,7 @@ class TestBinanceLiveService(TestLiveExchangeService):
             open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order])
             eq_(len(open_orders), 0)
 
-            open_buy_order = self.service.get_open_order(buy_order.order_id)
+            open_buy_order = self.service.get_order(buy_order.order_id)
             assert (open_buy_order is None)
         # clean up any placed orders even if there's an exception.
         finally:

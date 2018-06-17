@@ -5,7 +5,9 @@ Exchanges won't allow for multiple accounts per exchange. So, the same exchange 
 and testing. This creates some trickiness, for example, when asserting the number of open orders is as expected,
 the number of open orders could vary depending on which production orders were placed.
 """
+from copy import copy
 from time import sleep
+from typing import Dict
 
 from nose.tools import eq_, assert_almost_equal, assert_true
 
@@ -26,6 +28,10 @@ class TestBittrexLiveService(TestLiveExchangeService):
     live_service_class = BittrexLiveService
     xrp_tag_len = 10
 
+    def test_fetch_order(self):
+        exchange_order_id: str = '54ee8a42-0354-423e-9d23-8226c4a8e9c7'
+        order: Order = self.service.fetch_order(exchange_order_id=exchange_order_id)
+
     def test_order_crud(self):
         """
         Should be able to place orders, fetch open orders, and cancel orders.
@@ -44,92 +50,111 @@ class TestBittrexLiveService(TestLiveExchangeService):
         quote_sell_price = quote_ticker.ask * (one + FinancialData(.2))
         quote_buy_price = quote_ticker.bid * (one - FinancialData(.2))
 
-        # Only Bittrex has a ETH balance
-        sell_amount = self.service.get_balance(self.pair.quote).free
-        sell_order: Order = Order(**{
-            'amount': sell_amount,
-            'price': quote_buy_price,
-
+        base_order_kwargs: Dict = {
             'base': self.pair.base,
             'quote': self.pair.quote,
 
             'exchange_id': self.service.exchange_id,
-            'order_side': OrderSide.sell
-        })
-        executed_sell_order: Order = self.service.create_limit_sell_order(order=sell_order)
+            'order_status': OrderStatus.pending,
+            'order_type': OrderType.limit
+        }
+        # Only Bittrex has a BTC balance
+        sell_amount = self.service.get_balance(self.pair.quote).free
+        sell_order_kwargs: Dict = {
+            'amount': sell_amount,
+            'price': quote_sell_price,
+
+            'order_side': OrderSide.sell,
+            # The following Order.financial_data_fields are not populated by the exchange response
+            'remaining': sell_amount,
+            'filled': zero,
+        }
+        sell_order_kwargs.update(base_order_kwargs)
+        sell_order: Order = Order(**sell_order_kwargs)
+        open_sell_order: Order = self.service.create_limit_sell_order(order=sell_order)
+        fields_to_ignore = [
+            'exchange_order_id',
+            'order_status',
+            'processing_time'
+        ]
 
         buy_amount = self.service.get_balance(self.pair.base).free / quote_buy_price * FinancialData(.9)
-        buy_order: Order = Order(**{
+        buy_order_kwargs: Dict = {
             'amount': buy_amount,
             'price': quote_buy_price,
 
-            'base': self.pair.base,
-            'quote': self.pair.quote,
-
-            'exchange_id': self.service.exchange_id,
-            'order_side': OrderSide.buy
-        })
-        executed_buy_order = self.service.create_limit_buy_order(order=buy_order)
+            'order_side': OrderSide.buy,
+            # The following Order.financial_data_fields are not populated by the exchange response
+            'remaining': buy_amount,
+            'filled': zero,
+        }
+        buy_order_kwargs.update(base_order_kwargs)
+        buy_order: Order = Order(**buy_order_kwargs)
+        open_buy_order = self.service.create_limit_buy_order(order=buy_order)
 
         try:
+            # compare with order returned from exchange
+            eq_ignore_certain_fields(sell_order, open_sell_order, fields_to_ignore=fields_to_ignore)
+
+            # numerical data
             # unlike in the case of bittrex, the binance response populates these values. The response
             # precision is to the 2nd decimal place.
             precision = FinancialData.five_places if self.live_service_class.exchange_id == exchange_ids.bittrex else 2
 
-            # Sell order should have expected fields
-            check_required_fields(sell_order)
-
-            # exchange-related data
-            eq_(sell_order.exchange_id, self.service.exchange_id)
-
-            # numerical data
             assert_almost_equal(sell_order.amount, sell_amount, places=precision)
-            assert_almost_equal(sell_order.filled, zero, places=precision)
             assert_almost_equal(sell_order.price, quote_sell_price, places=precision)
             assert_almost_equal(sell_order.remaining, sell_order.amount, places=precision)
 
             # metadata
-            eq_(sell_order.order_type, OrderType.limit)
-            eq_(sell_order.order_status, OrderStatus.open)
             eq_(sell_order.order_side, OrderSide.sell)
-            eq_(sell_order.base, self.pair.base)
-            eq_(sell_order.quote, self.pair.quote)
 
-            # Buy order should have expected fields
-            check_required_fields(buy_order)
-            # exchange-related data
-            eq_(buy_order.exchange_id, self.service.exchange_id)
+            # compare buy_order with open_buy_order
+            eq_ignore_certain_fields(buy_order, open_buy_order, fields_to_ignore=fields_to_ignore)
 
             # numerical data
             assert_almost_equal(buy_order.amount, buy_amount, places=precision)
-            assert_almost_equal(buy_order.filled, zero, places=precision)
             assert_almost_equal(buy_order.price, quote_buy_price, places=precision)
             assert_almost_equal(buy_order.remaining, buy_order.amount, places=precision)
 
             # metadata
-            eq_(buy_order.order_type, OrderType.limit)
-            eq_(buy_order.order_status, OrderStatus.open)
             eq_(buy_order.order_side, OrderSide.buy)
-            eq_(buy_order.base, self.pair.base)
-            eq_(buy_order.quote, self.pair.quote)
+
+            # same fields for pending buy and sell orders
+            for order in [buy_order, sell_order]:
+                check_required_fields(order)
+
+                assert (order.exchange_order_id is None)
+                eq_(order.order_status, OrderStatus.pending)
+
+            # same fields for opened buy and sell orders
+            for order in [open_buy_order, open_sell_order]:
+                eq_(order.exchange_id, self.service.exchange_id)
+                eq_(order.order_type, OrderType.limit)
+                eq_(order.base, self.pair.base)
+                eq_(order.quote, self.pair.quote)
+
+                # order_status and exchange_order_id should be different
+                assert (order.exchange_order_id is not None)
+                eq_(order.order_status, OrderStatus.open)
+
+                assert_almost_equal(order.filled, zero, places=precision)
 
             sleep(self.sleep_sec_consistency)
 
             # Unlike Binance, Bittrex create limit order responses don't have the following fields
-            numerical_fields = ['amount', 'filled', 'price', 'remaining']
             fields_to_ignore = ['processing_time',
-                                'event_time'] + numerical_fields if self.live_service_class.exchange_id == exchange_ids.bittrex else [
+                                'event_time'] + Order.financial_data_fields if self.live_service_class.exchange_id == exchange_ids.bittrex else [
                 'processing_time']
 
             open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order, sell_order])
             assert_true(len(open_orders) >= 2)
 
-            open_sell_order = self.service.get_open_order(sell_order.order_id)
+            open_sell_order = self.service.get_order(sell_order.order_id)
             check_required_fields(open_sell_order)
 
             eq_ignore_certain_fields(open_sell_order, sell_order, fields_to_ignore=fields_to_ignore)
 
-            open_buy_order = self.service.get_open_order(buy_order.order_id)
+            open_buy_order = self.service.get_order(buy_order.order_id)
             check_required_fields(open_buy_order)
             eq_ignore_certain_fields(open_buy_order, buy_order, fields_to_ignore=fields_to_ignore)
 
@@ -145,16 +170,16 @@ class TestBittrexLiveService(TestLiveExchangeService):
 
             open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order, sell_order])
             eq_(len(open_orders), 0)
-            open_sell_order = self.service.get_open_order(sell_order.order_id)
+            open_sell_order = self.service.get_order(sell_order.order_id)
             assert (open_sell_order is None)
 
-            open_buy_order = self.service.get_open_order(buy_order.order_id)
+            open_buy_order = self.service.get_order(buy_order.order_id)
             assert (open_buy_order is None)
         # clean up any placed orders even if there's an exception.
         finally:
             try:
-                self.service.cancel_order(pair=self.pair, exchange_order_id=buy_order.exchange_order_id)
-                self.service.cancel_order(pair=self.pair, exchange_order_id=sell_order.exchange_order_id)
+                for order in [open_buy_order, open_sell_order]:
+                    self.service.cancel_order(pair=self.pair, exchange_order_id=order.exchange_order_id)
             # will throw an exception if order was already cancelled
             except Exception:
                 pass

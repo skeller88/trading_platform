@@ -51,11 +51,9 @@ class LiveExchangeService(ExchangeServiceAbc):
         :param pair: Pair
         :return:
         """
-        self.__client.verbose = True
         if self.exchange_id == exchange_ids.binance:
             exchange_order_id = int(exchange_order_id)
         response = make_api_request(self.__client.cancel_order, exchange_order_id, pair.name_for_exchange_clients, {})
-        self.__client.verbose = False
         if response:
             return Order(**{
                 'exchange_id': self.exchange_id,
@@ -107,8 +105,11 @@ class LiveExchangeService(ExchangeServiceAbc):
         else:
             symbol = pair.name_for_exchange_clients
 
-        response = self.__client.fetch_order(id=exchange_order_id, symbol=symbol)
-        return response
+        response: Dict = make_api_request(self.__client.fetch_order, exchange_order_id, symbol)
+
+        if response:
+            order: Order = Order.from_exchange_fetch_order_response(response)
+            return order
 
     def fetch_orders(self, pair=None):
         return self.__client.fetch_orders(pair.name_for_exchange_clients)
@@ -125,9 +126,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         """
         self.__orders= {}
         try:
-            self.__client.verbose = True
             order_data_list = make_api_request(self.__client.fetch_open_orders, pair.name_for_exchange_clients)
-            self.__client.verbose = False
         except ccxt.OrderNotFound:
             order_data_list = None
 
@@ -135,13 +134,12 @@ class LiveExchangeService(ExchangeServiceAbc):
             return self.__orders
 
         for order_data in order_data_list:
-            standardized = Order.standardize_exchange_data(order_data, self.exchange_id)
-            order = Order(**standardized)
+            order: Order = Order.from_fetch_order_response(order_data, self.exchange_id)
             self.__orders[order.order_id] = order
 
         return self.__orders
 
-    def get_open_order(self, order_id) -> Optional[Order]:
+    def get_order(self, order_id) -> Optional[Order]:
         return self.__orders.get(order_id)
 
     ###########################################

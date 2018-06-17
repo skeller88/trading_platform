@@ -262,7 +262,7 @@ class Order:
 
     def copy_updated_with_exchange_data(self, order_data: Dict):
         """
-        Construct an order instance that's a copy of the current instance, but with certain fields
+        Construct an open order instance that's a copy of the current instance, but with certain fields
         overwritten by the values in order_data. This method exists because the data returned from
         an exchange for a given Order may be different from the values of an Order instance.
 
@@ -278,14 +278,18 @@ class Order:
         """
         copy: Order = deepcopy(self)
         copy.exchange_order_id = order_data.get('id')
+        copy.order_status = OrderStatus.open
 
         def overwrite_field_with_exchange_data(field):
             value = order_data.get(field)
             if value is not None:
                 instance_field_value = getattr(copy, field)
+                # TODO - print via logger.error instead
                 if value != instance_field_value:
-                    print('order field {0} - instance value is {1}, exchange_data value is {2}'.format(field, value,
+                    print('ERROR - order field {0} - instance value is {1}, exchange_data value is {2}'.format(field, value,
                                                                                                        instance_field_value))
+                elif instance_field_value is None:
+                    print('ERROR - order field {0} - instance value and exchange_data value is None'.format(field))
                 setattr(copy, field, value)
 
         [overwrite_field_with_exchange_data(field) for field in self.financial_data_fields]
@@ -296,19 +300,33 @@ class Order:
         return cls.required_fields + cls.nullable_fields
 
     @classmethod
-    def standardize_exchange_data(cls, order_data, exchange_id=None):
+    def from_fetch_order_response(cls, order_data, exchange_id=None):
         """
-        Standardizes exchange data and returns a dict with the standardized data. Has logic to
-        handle different exchanges.
+        Converts exchange fetch_*_order response to an Order instance. Has logic to handle different exchanges.
+        See exchange_data.py for example response format.
         Args:
             order_data:
             exchange_id: Determines how standardization of certain fields will occur.
 
-        Returns:
+        Returns: Order
 
         """
+        # 'id': '309ab197-83e9-49e0-90ac-7c9942ec010b',
+        # 'timestamp': 1529193139011,
+        # 'datetime': '2018-06-16T23:52:19.110Z',
+        # 'lastTradeTimestamp': None,
+        # 'symbol': 'NEO/BTC',
+        # 'type': 'limit',
+        # 'side': 'buy',
+        # 'price': 0.00489211,
+        # 'cost': 0.01467633,
+        # 'average': None,
+        # 'amount': 3.0,
+        # 'filled': 0.0,
+        # 'remaining': 3.0,
+        # 'status': 'open',
         remaining = order_data.get('remaining') if order_data.get('remaining') is not None else order_data.get('amount')
-        standardized = {
+        kwargs = {
             # numerical data
             'amount': FinancialData(order_data.get('amount')),
             'cost': FinancialData(order_data.get('cost')),
@@ -318,14 +336,14 @@ class Order:
         }
 
         if exchange_id == exchange_ids.binance:
-            standardized['exchange_order_id'] = order_data.get('id')
+            kwargs['exchange_order_id'] = order_data.get('id')
         elif exchange_id == exchange_ids.bittrex:
-            standardized['exchange_order_id'] = order_data.get('id')
+            kwargs['exchange_order_id'] = order_data.get('id')
 
         if order_data.get('timestamp'):
-            standardized['event_time'] = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
+            kwargs['event_time'] = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
 
-        return standardized
+        return cls(**kwargs)
 
     @staticmethod
     def classname():

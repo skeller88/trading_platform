@@ -105,7 +105,7 @@ class BittrexLiveService:
         if response is None:
             return
 
-        standardized = Order.standardize_exchange_data(response, self.exchange_id)
+        standardized = Order.from_fetch_order_response(response, self.exchange_id)
 
         # additional exchange data
         standardized = self.add_missing_create_limit_order_fields(price=target, amount=amount, pair=pair,
