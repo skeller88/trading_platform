@@ -18,7 +18,7 @@ exchange_services_by_id = live_subclasses.instantiate(live_subclasses.mvp_live()
 bittrex = exchange_services_by_id.get(exchange_ids.bittrex)
 
 
-def cancel_orders():
+def cancel_orders(pair):
     """
     Cancel any orders that weren't cancelled by the tests
     Returns:
@@ -27,7 +27,7 @@ def cancel_orders():
     # exchange_services_by_id = live_subclasses.instantiate(live_subclasses.mvp_live())
 
     for exchange in exchange_services_by_id.values():
-        open_orders = exchange.fetch_open_orders()
+        open_orders = exchange.fetch_open_orders(pair)
         for order_id, order in open_orders.items():
             print('Cancelling order', order_id)
             exchange.cancel_order(pair=Pair(base=order.base, quote=order.quote),
@@ -47,7 +47,9 @@ def fetch_balances():
         for currency, balance in balances.items():
             print(currency, balance.free)
 
+
 pair = Pair(base='BTC', quote='NEO')
+
 order: Order = Order(**{
     # app metadata
     'version': Order.current_version,
@@ -64,18 +66,17 @@ order: Order = Order(**{
     'amount': FinancialData(3),
     'price': FinancialData(0.00689211)
 })
+
 # order = bittrex.create_limit_buy_order(order=order)
-# print(order)
-list(map(lambda x: print(x[0], x[1]), bittrex.fetch_orders(pair).items()))
+# print(order.exchange_order_id)
+exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7'
+order = bittrex.fetch_order(exchange_order_id=exchange_order_id, pair=pair)
 
-
-
+list(map(lambda x: print(x[0], x[1]), order.items()))
 # list(map(lambda x: print(x[0], x[1].free), bittrex.fetch_balances().items()))
 
-# print(bittrex.fetch_order_book(symbol=Pair(base='BTC', quote='ETH').name_for_exchange_clients, limit=None, params={}))
 
 # Uncomment the desired operation
-# cancel_orders()
 # fetch_balances()
 # fetch_closed_orders()
 

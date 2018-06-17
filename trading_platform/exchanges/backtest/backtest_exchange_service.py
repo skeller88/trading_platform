@@ -241,7 +241,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
                 order.order_status in [OrderStatus.filled, OrderStatus.cancelled,
                                        OrderStatus.cancelled_and_partially_filled]}
 
-    def fetch_open_orders(self, symbol=None) -> Dict[str, Order]:
+    def fetch_open_orders(self, pair: Pair) -> Dict[str, Order]:
         return {order.order_id: order for order in self.orders if order.order_status == OrderStatus.open}
 
     def fetch_order(self, exchange_order_id: str, pair: Pair) -> Optional[Order]:
@@ -453,7 +453,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
     def set_tickers(self, tickers):
         self.tickers = tickers
 
-    def get_ticker(self, pair_name):
+    def get_ticker(self, pair_name: str) -> Optional[Ticker]:
         return self.tickers.get(pair_name)
 
     def get_tickers(self) -> Dict[str, Ticker]:

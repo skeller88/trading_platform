@@ -102,26 +102,31 @@ class LiveExchangeService(ExchangeServiceAbc):
         return self.__client.fetch_closed_orders(symbol, since, limit, params)
 
     def fetch_order(self, exchange_order_id=None, pair=None) -> Optional[Order]:
-        return self.__client.fetch_order(id=exchange_order_id, symbol=pair.name_for_exchange_clients)
+        if pair is None:
+            symbol = None
+        else:
+            symbol = pair.name_for_exchange_clients
+
+        response = self.__client.fetch_order(id=exchange_order_id, symbol=symbol)
+        return response
 
     def fetch_orders(self, pair=None):
         return self.__client.fetch_orders(pair.name_for_exchange_clients)
 
-    def fetch_open_orders(self, symbol=None) -> Dict[str, Order]:
+    def fetch_open_orders(self, pair: Pair) -> Dict[str, Order]:
         """
 
         Args:
-            symbol: should be passed as a parameter when possible because on Binance,
+            pair: should be passed as a parameter when possible because on Binance,
                 fetching open orders without specifying a symbol is rate-limited to one call per 152 seconds.
 
         Returns:
 
         """
         self.__orders= {}
-        self.__client.load_markets()
         try:
             self.__client.verbose = True
-            order_data_list = make_api_request(self.__client.fetch_open_orders, symbol)
+            order_data_list = make_api_request(self.__client.fetch_open_orders, pair.name_for_exchange_clients)
             self.__client.verbose = False
         except ccxt.OrderNotFound:
             order_data_list = None
@@ -351,7 +356,7 @@ class LiveExchangeService(ExchangeServiceAbc):
     def get_tickers(self) -> Dict[str, Ticker]:
         return self.__tickers
 
-    def get_ticker(self, pair_name) -> Optional[Ticker]:
+    def get_ticker(self, pair_name: str) -> Optional[Ticker]:
         return self.__tickers.get(pair_name)
 
     def fetch_order_book(self, symbol, limit=None, params={}):

@@ -126,6 +126,76 @@ bittrex_limit_sell_order = {
     'status': 'open'
 }
 
+bittrex_fetch_order_open_status = {
+    'info':
+        {'AccountId': None,
+         'OrderUuid': '309ab197-83e9-49e0-90ac-7c9942ec010b',
+         'Exchange': 'BTC-NEO',
+         'Type': 'LIMIT_BUY',
+         'Quantity': 3.0,
+         'QuantityRemaining': 3.0,
+         'Limit': 0.00489211,
+         'Reserved': 0.01467633,
+         'ReserveRemaining': 0.01467633,
+         'CommissionReserved': 3.669e-05,
+         'CommissionReserveRemaining': 3.669e-05,
+         'CommissionPaid': 0.0,
+         'Price': 0.0,
+         'PricePerUnit': None,
+         'Opened': '2018-06-16T23:52:19.11',
+         'Closed': None,
+         'IsOpen': True,
+         'Sentinel': 'e91cc46e-0ac5-4e27-b026-bb305ed76b73',
+         'CancelInitiated': False,
+         'ImmediateOrCancel': False,
+         'IsConditional': False,
+         'Condition': 'NONE',
+         'ConditionTarget': None},
+    'id': '309ab197-83e9-49e0-90ac-7c9942ec010b',
+    'timestamp': 1529193139011,
+    'datetime': '2018-06-16T23:52:19.110Z',
+    'lastTradeTimestamp': None,
+    'symbol': 'NEO/BTC',
+    'type': 'limit',
+    'side': 'buy',
+    'price': 0.00489211,
+    'cost': 0.01467633,
+    'average': None,
+    'amount': 3.0,
+    'filled': 0.0,
+    'remaining': 3.0,
+    'status': 'open',
+    'fee': {'cost': 0.0, 'currency': 'BTC'}}
+
+# Same as above except for the following:
+bittrex_fetch_order_filled_status = {
+    'info': {
+        'QuantityRemaining': 0.0,
+        'CommissionPaid': 4.381e-05,
+        'Price': 0.01752657,
+        'PricePerUnit': 0.00584219,
+        'Closed': '2018-06-17T00:01:17.51',
+        'IsOpen': False,
+        'Sentinel': '6b0014d0-084b-4b00-9a91-0c7f42494788'},
+    'lastTradeTimestamp': 1529193677051,
+    'average': 0.00584219,
+    'filled': 3.0,
+    'remaining': 0.0,
+    'status': 'closed',
+    'fee': {'cost': 4.381e-05,
+            'currency': 'BTC'}}
+
+# Same as above except for the following:
+bittrex_fetch_order_cancelled_status = {
+    'info': {
+        'Closed': '2018-06-16T23:57:20.787',
+        'IsOpen': False,
+        'Sentinel': 'fa9b6db0-5ea6-4879-9961-74692e4eaadc',
+        'CancelInitiated': True},
+    'id': '309ab197-83e9-49e0-90ac-7c9942ec010b',
+    'lastTradeTimestamp': 1529193440787,
+    'status': 'canceled'}
+
 bittrex_ticker = {'symbol': 'ZEC/USDT',
                   'timestamp': 1524789534807,
                   'datetime': '2018-04-27T00:38:55.807Z',

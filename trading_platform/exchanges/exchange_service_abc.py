@@ -62,7 +62,7 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def fetch_open_orders(self, symbol) -> Dict[str, Order]:
+    def fetch_open_orders(self, pair: Pair) -> Dict[str, Order]:
         pass
 
     @abstractmethod
@@ -161,7 +161,7 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def get_ticker(self) -> Optional[Ticker]:
+    def get_ticker(self, pair_name: str) -> Optional[Ticker]:
         pass
 
     @staticmethod
