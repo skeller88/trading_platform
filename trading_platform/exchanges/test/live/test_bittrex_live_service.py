@@ -56,6 +56,17 @@ class TestBittrexLiveService(TestLiveExchangeService):
         assert (order.exchange_order_id is not None)
         eq_(order.order_status, OrderStatus.filled)
 
+    def test_cancel_filled_order(self):
+        order_to_cancel: Order = Order(**{
+            'base': self.pair.base,
+            'quote': self.pair.quote,
+
+            'exchange_id': self.service.exchange_id,
+            'exchange_order_id': self.exchange_order_id_for_filled_order,
+        })
+
+        order_cancelled: Order = self.service.cancel_order(order=order_to_cancel)
+
     def test_buy_order_crud(self):
         """
         Should be able to place orders, fetch open orders, and cancel orders.
@@ -107,9 +118,9 @@ class TestBittrexLiveService(TestLiveExchangeService):
             eq_ignore_certain_fields(buy_order, open_buy_order, fields_to_ignore=fields_to_ignore)
 
             # numerical data
-            assert_almost_equal(buy_order.amount, buy_amount, places=FinancialData.six_places)
-            assert_almost_equal(buy_order.price, quote_buy_price, places=FinancialData.six_places)
-            assert_almost_equal(buy_order.remaining, buy_order.amount, places=FinancialData.six_places)
+            assert_almost_equal(buy_order.amount, buy_amount, places=FinancialData.eight_places)
+            assert_almost_equal(buy_order.price, quote_buy_price, places=FinancialData.eight_places)
+            assert_almost_equal(buy_order.remaining, buy_order.amount, places=FinancialData.eight_places)
 
             # metadata
             eq_(buy_order.order_side, OrderSide.buy)
@@ -130,7 +141,7 @@ class TestBittrexLiveService(TestLiveExchangeService):
             assert (buy_order.exchange_order_id is not None)
             eq_(buy_order.order_status, OrderStatus.open)
 
-            assert_almost_equal(buy_order.filled, zero, places=FinancialData.six_places)
+            assert_almost_equal(buy_order.filled, zero, places=FinancialData.eight_places)
 
             sleep(self.sleep_sec_consistency)
 
@@ -175,7 +186,7 @@ class TestBittrexLiveService(TestLiveExchangeService):
 
          """
         self.service.fetch_latest_tickers()
-        balances = self.service.fetch_balances()
+        self.service.fetch_balances()
         quote_ticker = self.service.get_ticker(self.pair.name)
         quote_sell_price = quote_ticker.ask * (one + FinancialData(.2))
 

@@ -1,7 +1,7 @@
 from typing import Dict, Optional, List
 
 import ccxt
-from ccxt import ExchangeError
+from ccxt import ExchangeError, InvalidOrder
 
 from trading_platform.core.constants import exchange_pairs
 from trading_platform.exchanges.data import standardizers
@@ -45,7 +45,7 @@ class LiveExchangeService(ExchangeServiceAbc):
     # Trading - Orders
     ###########################################
 
-    def cancel_order(self, order) -> Order:
+    def cancel_order(self, order) -> Optional[Order]:
         """
         :param order: str
         :param pair: Pair
@@ -54,9 +54,16 @@ class LiveExchangeService(ExchangeServiceAbc):
         if self.exchange_id == exchange_ids.binance:
             order.exchange_order_id = int(order.exchange_order_id)
         pair: Pair = Pair(base=order.base, quote=order.quote)
-        response = make_api_request(self.__client.cancel_order, order, pair.name_for_exchange_clients, {})
+        try:
+            response = make_api_request(self.__client.cancel_order, order.exchange_order_id, pair.name_for_exchange_clients, {})
+        except InvalidOrder as ex:
+            if 'ORDER_NOT_OPEN' in ex.args[0]:
+                return None
+            else:
+                raise ex
+
         if response:
-            return order.copy_updated_with_create_limit_order_exchange_response(response)
+            return order.copy_updated_with_create_or_cancel_order_exchange_response(response)
 
         raise Exception('Order was not cancelled', response)
 

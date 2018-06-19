@@ -4,7 +4,6 @@ Interact with exchanges without logging in or running tests. Common operations i
 - Checking balances
 - Placing orders
 """
-from typing import Dict
 
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
@@ -47,7 +46,7 @@ def fetch_balances():
             print(currency, balance.free)
 
 
-pair = Pair(base='BTC', quote='NEO')
+pair = Pair(base='USDT', quote='BTC')
 
 order: Order = Order(**{
     # app metadata
@@ -62,19 +61,20 @@ order: Order = Order(**{
     'base': pair.base,
     'quote': pair.quote,
 
-    'amount': FinancialData(3),
-    'price': FinancialData(0.00689211)
+    'amount': FinancialData(0.01),
+    'price': FinancialData(9000),
+    'exchange_order_id': '3851846a-5e59-4475-a75b-dd2b29b18c65'
 })
 
-# order = bittrex.create_limit_buy_order(order=order)
+order = bittrex.cancel_order(order=order)
 # print(order.exchange_order_id)
 # exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7'
 # order = bittrex.fetch_order(exchange_order_id=exchange_order_id, pair=pair)
 
-# print(bittrex.fetch_open_orders(pair=pair))
-print(bittrex.fetch_closed_orders())
+# orders = bittrex.fetch_open_orders(pair=pair)
+# print(bittrex.fetch_closed_orders())
 
-# list(map(lambda x: print(x[0], x[1]), order.items()))
+# list(map(lambda x: print(x[0], x[1].exchange_order_id), orders.items()))
 # list(map(lambda x: print(x[0], x[1].free), bittrex.fetch_balances().items()))
 
 

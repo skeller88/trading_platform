@@ -14,8 +14,8 @@ class SqlAlchemyTickerDto(Base):
     base = Column(String(15), index=True, nullable=False)
     quote = Column(String(15), index=True, nullable=False)
 
-    ask = Column(DECIMAL(scale=FinancialData.six_places), nullable=False)
-    bid = Column(DECIMAL(scale=FinancialData.six_places), nullable=False)
+    ask = Column(DECIMAL(scale=FinancialData.eight_places), nullable=False)
+    bid = Column(DECIMAL(scale=FinancialData.eight_places), nullable=False)
     db_create_timestamp = Column(Float, default=utc_timestamp, nullable=False)
     db_update_timestamp = Column(Float, onupdate=utc_timestamp, nullable=True)
     last = Column(Numeric, nullable=False)
