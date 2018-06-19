@@ -6,6 +6,7 @@ and testing. This creates some trickiness, for example, when asserting the numbe
 the number of open orders could vary depending on which production orders were placed.
 """
 from time import sleep
+from typing import Dict
 
 from nose.tools import eq_, assert_almost_equal, assert_true
 
@@ -15,6 +16,7 @@ from trading_platform.exchanges.data.enums.order_status import OrderStatus
 from trading_platform.exchanges.data.enums.order_type import OrderType
 from trading_platform.exchanges.data.financial_data import zero, FinancialData, one
 from trading_platform.exchanges.data.order import Order
+from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.utils import check_required_fields
 from trading_platform.exchanges.live.binance_live_service import BinanceLiveService
 from trading_platform.core.test import data
@@ -91,20 +93,22 @@ class TestBinanceLiveService(TestLiveExchangeService):
                                 'exchange_timestamp'] + numerical_fields if self.live_service_class.exchange_id == exchange_ids.bittrex else [
                 'app_create_timestamp']
 
-            open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order])
+            open_orders: Dict[str, Order] = self.service.fetch_open_orders(
+                Pair(base=self.pair.base, quote=self.pair.quote))
             assert_true(len(open_orders) >= 1)
 
             open_buy_order = self.service.get_order(buy_order.order_id)
             check_required_fields(open_buy_order)
             eq_ignore_certain_fields(open_buy_order, buy_order, fields_to_ignore=fields_to_ignore)
 
-            cancelled_buy_order = self.service.cancel_order(pair=self.pair, exchange_order_id=buy_order.exchange_order_id)
+            cancelled_buy_order = self.service.cancel_order(order=buy_order)
             eq_(cancelled_buy_order.order_id, buy_order.order_id)
             eq_(cancelled_buy_order.order_status, OrderStatus.cancelled)
 
             sleep(self.sleep_sec_consistency)
 
-            open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order])
+            open_orders: Dict[str, Order] = self.service.fetch_open_orders(
+                Pair(base=self.pair.base, quote=self.pair.quote))
             eq_(len(open_orders), 0)
 
             open_buy_order = self.service.get_order(buy_order.order_id)
@@ -112,7 +116,7 @@ class TestBinanceLiveService(TestLiveExchangeService):
         # clean up any placed orders even if there's an exception.
         finally:
             try:
-                self.service.cancel_order(pair=self.pair, exchange_order_id=buy_order.exchange_order_id)
+                self.service.cancel_order(order=buy_order)
             # will throw an exception if order was already cancelled
             except Exception:
                 pass

@@ -135,7 +135,7 @@ class S3ObjectService():
 
             if len(failures) > 0:
                 list(map(print, failures))
-                raise Exception('failed')
+                raise Exception('failed to fetch one of the objects in the window')
 
             if len(data_for_prefix) > 1:
                 header: List[str] = data_for_prefix.pop(0)

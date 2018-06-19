@@ -45,23 +45,18 @@ class LiveExchangeService(ExchangeServiceAbc):
     # Trading - Orders
     ###########################################
 
-    def cancel_order(self, exchange_order_id, pair) -> Order:
+    def cancel_order(self, order) -> Order:
         """
-        :param exchange_order_id: str
+        :param order: str
         :param pair: Pair
         :return:
         """
         if self.exchange_id == exchange_ids.binance:
-            exchange_order_id = int(exchange_order_id)
-        response = make_api_request(self.__client.cancel_order, exchange_order_id, pair.name_for_exchange_clients, {})
+            order.exchange_order_id = int(order.exchange_order_id)
+        pair: Pair = Pair(base=order.base, quote=order.quote)
+        response = make_api_request(self.__client.cancel_order, order, pair.name_for_exchange_clients, {})
         if response:
-            return Order(**{
-                'exchange_id': self.exchange_id,
-                'exchange_order_id': exchange_order_id,
-                'order_status': OrderStatus.cancelled,
-                'base': pair.base,
-                'quote': pair.quote
-            })
+            return order.copy_updated_with_create_limit_order_exchange_response(response)
 
         raise Exception('Order was not cancelled', response)
 
@@ -93,7 +88,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         if response is None:
             return
 
-        order_copy: Order = order.copy_updated_with_exchange_data(response)
+        order_copy: Order = order.copy_updated_with_create_or_cancel_order_exchange_response(response)
         return order_copy
 
     def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
@@ -108,14 +103,23 @@ class LiveExchangeService(ExchangeServiceAbc):
         response: Dict = make_api_request(self.__client.fetch_order, exchange_order_id, symbol)
 
         if response:
-            order: Order = Order.from_exchange_fetch_order_response(response)
+            order: Order = Order.from_fetch_order_exchange_response(response, self.exchange_id)
             return order
 
     def fetch_orders(self, pair=None):
+        """
+        Some exchanges, like Bittrex, haven't implemented this method.
+        Args:
+            pair:
+
+        Returns:
+
+        """
         return self.__client.fetch_orders(pair.name_for_exchange_clients)
 
     def fetch_open_orders(self, pair: Pair) -> Dict[str, Order]:
         """
+        Fetches open orders, updates the internal orders state, and returns the open orders.
 
         Args:
             pair: should be passed as a parameter when possible because on Binance,
@@ -124,7 +128,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         Returns:
 
         """
-        self.__orders= {}
+        open_orders: Dict[str, Order] = {}
         try:
             order_data_list = make_api_request(self.__client.fetch_open_orders, pair.name_for_exchange_clients)
         except ccxt.OrderNotFound:
@@ -134,10 +138,11 @@ class LiveExchangeService(ExchangeServiceAbc):
             return self.__orders
 
         for order_data in order_data_list:
-            order: Order = Order.from_fetch_order_response(order_data, self.exchange_id)
+            order: Order = Order.from_fetch_order_exchange_response(order_data, self.exchange_id)
             self.__orders[order.order_id] = order
+            open_orders[order.order_id] = order
 
-        return self.__orders
+        return open_orders
 
     def get_order(self, order_id) -> Optional[Order]:
         return self.__orders.get(order_id)

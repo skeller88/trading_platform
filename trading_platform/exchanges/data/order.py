@@ -261,14 +261,22 @@ class Order:
         copy.remaining = zero
         return copy
 
-    def copy_updated_with_exchange_data(self, order_data: Dict):
+    def copy_updated_with_create_or_cancel_order_exchange_response(self, order_data: Dict):
         """
         Construct an open order instance that's a copy of the current instance, but with certain fields
-        overwritten by the values in order_data. This method exists because the data returned from
-        an exchange for a given Order may be different from the values of an Order instance.
+        overwritten by the values in order_data from a create_limit_*_order or cancel_order exchange response.
+
+        This method exists because the data returned from an exchange
+        for a given Order may:
+        1) be different from the values of an Order instance.
+        2) not include all of the Order metadata. For example, Bittrex's create_limit_buy_order call does not return
+        order numerical data.
 
         There are some differences in exchange create limit order responses.
         - Binance sets the "filled" and "remaining" fields. Bittrex doesn't.
+
+        the exchange data returned by the create_limit call is different from the
+        # exchange data returned by the fetch_open_orders call.
 
         Args:
             order_data:
@@ -280,6 +288,10 @@ class Order:
         copy: Order = deepcopy(self)
         copy.exchange_order_id = order_data.get('id')
         copy.order_status = OrderStatus.open
+        copy.app_create_timestamp = utc_timestamp()
+
+        if order_data.get('timestamp'):
+            copy.exchange_timestamp = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
 
         def overwrite_field_with_exchange_data(field):
             value = order_data.get(field)
@@ -297,14 +309,15 @@ class Order:
         return copy
 
     @classmethod
-    def csv_fieldnames(cls):
-        return cls.required_fields + cls.nullable_fields
-
-    @classmethod
-    def from_fetch_order_response(cls, order_data, exchange_id=None):
+    def from_fetch_order_exchange_response(cls, order_data, exchange_id=None):
         """
         Converts exchange fetch_*_order response to an Order instance. Has logic to handle different exchanges.
         See exchange_data.py for example response format.
+
+        Unlike copy_updated_with_create_or_cancel_order_exchange_response, this method is not a copy of an
+        existing Order instance that is updated with exchange data. That's because the app may not have the metadata
+        for an order that's being fetched.
+
         Args:
             order_data:
             exchange_id: Determines how standardization of certain fields will occur.
@@ -318,7 +331,7 @@ class Order:
             'exchange_id': exchange_id,
             'exchange_order_id': order_data.get('id'),
             'order_side': OrderSide.from_exchange_data(order_data.get('side')),
-            'order_status': OrderStatus.from_exchange_string(order_data.get('status')),
+            'order_status': OrderStatus.from_exchange_data(order_data),
             'order_type': OrderType.limit,
 
             # numerical data
@@ -340,6 +353,10 @@ class Order:
             kwargs['exchange_timestamp'] = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
 
         return cls(**kwargs)
+
+    @classmethod
+    def csv_fieldnames(cls):
+        return cls.required_fields + cls.nullable_fields
 
     @staticmethod
     def classname():

@@ -102,7 +102,7 @@ binance_ticker = {'symbol': 'CLOAK/ETH',
                             'count': 2824}}
 
 # Bittrex
-bittrex_limit_buy_order = {
+bittrex_create_limit_buy_order = {
     'info': {
         'success': True,
         'message': '',
@@ -114,7 +114,7 @@ bittrex_limit_buy_order = {
     'status': 'open'
 }
 
-bittrex_limit_sell_order = {
+bittrex_create_limit_sell_order = {
     'info': {
         'success': True,
         'message': '',

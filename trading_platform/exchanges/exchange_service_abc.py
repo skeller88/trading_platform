@@ -29,9 +29,9 @@ class ExchangeServiceAbc(ABC):
     ###########################################
 
     @abstractmethod
-    def cancel_order(self, exchange_order_id, pair) -> Order:
+    def cancel_order(self, order) -> Order:
         """
-        :param exchange_order_id: str
+        :param order: str
         :param pair: Pair
         :return:
         """
@@ -59,6 +59,10 @@ class ExchangeServiceAbc(ABC):
         :return:
 
         """
+        pass
+
+    @abstractmethod
+    def fetch_orders(self, pair=None):
         pass
 
     @abstractmethod

@@ -67,7 +67,8 @@ class BittrexLiveService:
     def create_conditional_order(self, order_side, pair, amount, target, condition_type):
         """
         This method currently returns a 500. Not sure if it's fixable because this method is only exposed
-        via the web API.
+        via the web API. It's unclear how to generate the response token that is sent with this request from the
+        bittrex web app.
         https://github.com/ccxt/ccxt/issues/2889
 
         Args:
@@ -105,7 +106,7 @@ class BittrexLiveService:
         if response is None:
             return
 
-        return Order.from_fetch_order_response(response, self.exchange_id)
+        return Order.from_fetch_order_exchange_response(response, self.exchange_id)
 
     def get_url(self, path, params) -> str:
         """

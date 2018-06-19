@@ -13,6 +13,9 @@ cancelled_and_partially_filled - order was cancelled after part of the order was
 
 filled - all of the order was filled
 """
+from typing import Dict
+
+from trading_platform.exchanges.data.financial_data import FinancialData, zero
 
 
 class OrderStatus:
@@ -22,29 +25,41 @@ class OrderStatus:
     partially_filled = 3
     cancelled = 4
     cancelled_and_partially_filled = 5
+    # ccxt refers to this as "closed". I think "filled" is more descriptive, plus some exchanges return "filled" in
+    # their raw (pre-ccxt) response.
     filled = 6
 
-    statuses_to_names = {
-        'pending': 0,
-        'insufficient_order_size': 1,
-        'open': 2,
-        'partially_filled': 3,
-        'cancelled': 4,
-        'cancelled_and_partially_filled': 5,
-        'filled': 6,
+    statuses_to_names: Dict[int, str] = {
+        0: 'pending',
+        1: 'insufficient_order_size',
+        2: 'open',
+        3: 'partially_filled',
+        # British spelling of cancelled has two l's, American spelling has one l.
+        4: 'cancelled',
+        5: 'cancelled_and_partially_filled',
+        6: 'filled',
     }
 
     @classmethod
-    def from_exchange_string(cls, exchange_string: str):
+    def from_exchange_data(cls, exchange_data: Dict):
         """
         Args:
-            exchange_string:
+            exchange_data:
 
         Returns: OrderStatus
 
         """
-        if exchange_string == 'canceled':
-            exchange_string = 'cancelled'
+        order_status: str = exchange_data.get('status')
 
-        return cls.statuses_to_names.get(exchange_string)
+        if order_status == 'closed':
+            return OrderStatus.filled
 
+        partially_filled = FinancialData(exchange_data.get('filled')) > zero
+
+        if order_status == 'canceled':
+            return OrderStatus.cancelled_and_partially_filled if partially_filled else OrderStatus.cancelled
+
+        if order_status == cls.statuses_to_names.get(OrderStatus.open):
+            return OrderStatus.partially_filled if partially_filled else OrderStatus.open
+
+        raise Exception('No OrderStatus found for order_status {0}'.format(order_status))

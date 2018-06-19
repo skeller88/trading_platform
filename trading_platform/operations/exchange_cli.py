@@ -30,8 +30,7 @@ def cancel_orders(pair):
         open_orders = exchange.fetch_open_orders(pair)
         for order_id, order in open_orders.items():
             print('Cancelling order', order_id)
-            exchange.cancel_order(pair=Pair(base=order.base, quote=order.quote),
-                                  exchange_order_id=order.exchange_order_id)
+            exchange.cancel_order(order=order.exchange_order_id)
 
 
 def fetch_balances():

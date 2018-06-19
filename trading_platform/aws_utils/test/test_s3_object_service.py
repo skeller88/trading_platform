@@ -54,4 +54,5 @@ class TestS3ObjectService(unittest.TestCase):
         df = pandas.read_csv(os.path.join(self.output_dir, files[0]))
         eq_(len(df.columns), len(Ticker.csv_fieldnames()))
         for fieldname in Ticker.csv_fieldnames():
+            print(fieldname)
             assert_true(fieldname in df.columns)

@@ -97,7 +97,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
     # Trading - Orders
     ###########################################
 
-    def cancel_order(self, exchange_order_id, pair, params={}):
+    def cancel_order(self, order):
         raise NotImplementedError('cancel_order')
 
     def create_limit_buy_order(self, order, params=None):
@@ -243,6 +243,9 @@ class BacktestExchangeService(ExchangeServiceAbc):
 
     def fetch_open_orders(self, pair: Pair) -> Dict[str, Order]:
         return {order.order_id: order for order in self.orders if order.order_status == OrderStatus.open}
+
+    def fetch_orders(self, pair=None):
+        raise NotImplementedError('fetch_orders')
 
     def fetch_order(self, exchange_order_id: str, pair: Pair) -> Optional[Order]:
         return self.orders.get(exchange_order_id)

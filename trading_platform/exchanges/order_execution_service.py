@@ -28,7 +28,7 @@ class OrderExecutionService:
     def execute_order_set(self, orders: Set[Order], session: Session, write_pending_order: bool,
                           check_if_orders_filled: bool) -> Dict[str, Order]:
         def execute_order_with_session(order) -> Order:
-            return self.execute_order(order, session, write_pending_order, False)
+            return self.execute_order(order, session, write_pending_order, check_if_order_filled=check_if_orders_filled)
 
         order_execution_attempts: Iterable[Order] = map(execute_order_with_session, orders)
         executed_orders: Iterable[Order] = filter(lambda order: order is not None, order_execution_attempts)
@@ -77,6 +77,7 @@ class OrderExecutionService:
         """
         Args:
             session:
+            order_status:
             order:
 
         Returns: Order. The filled order from the exchange, or the latest order snapshot, whose
@@ -133,8 +134,7 @@ class OrderExecutionService:
             self.sell_order.exchange_exchange_order_id))
 
         # TODO use cancelled attributes?
-        cancelled: Order = self.bittrex.cancel_order(pair=self.pair,
-                                                     exchange_exchange_order_id=self.sell_order.exchange_exchange_order_id)
+        cancelled: Order = self.bittrex.cancel_order()
         self.sell_order = None
         self.new_market_execution.sell_exchange_order_id = None
         # TODO account for when order is partially filled at the moment it's cancelled

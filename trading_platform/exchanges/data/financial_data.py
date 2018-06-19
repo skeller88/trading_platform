@@ -11,8 +11,6 @@ from decimal import Decimal
 
 class FinancialData:
     # Precision is the total number of digits, scale is the number of digits after the decimal point
-    decimal_scale = 15
-
     # For tests, the test result is not as precise, usually due to the fact that pandas don't have a decimal datatype.
     # These tests don't have as much precision as "decimal_scale".
     two_places = 2
@@ -20,9 +18,14 @@ class FinancialData:
     four_places = 4
     five_places = 5
 
+    six_places = 6
+
     def __new__(cls, number):
         try:
-            converted = round(Decimal(number), cls.decimal_scale)
+            # Bittrex precision for order numerical data is six places. In order to match an order_id in the database
+            # with the metadata of an order returned from the exchange, the app needs to round numerical fields to the
+            # sixth place as well.
+            converted = round(Decimal(number), cls.six_places)
             return converted
         except Exception as ex:
             # This exception occurs so often, swallow it
