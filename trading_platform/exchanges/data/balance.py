@@ -19,21 +19,21 @@ class Balance:
         'locked',
         'total',
         'version',
-        'processing_time']
+        'app_create_timestamp']
     # nullable at database layer
     nullable_fields = [
         # response from APIs does not always include the time the data was retrieved by the exchange
-        'event_time',
+        'exchange_timestamp',
 
         'db_id',
-        'created_at'
-        'updated_at'
+        'db_create_timestamp'
+        'db_update_timestamp'
     ]
 
     def __init__(self, **kwargs):
         self.db_id = kwargs.get('db_id')
-        self.updated_at = kwargs.get('updated_at')
-        self.created_at = kwargs.get('created_at')
+        self.db_update_timestamp = kwargs.get('db_update_timestamp')
+        self.db_create_timestamp = kwargs.get('db_create_timestamp')
 
         self.currency = kwargs.get('currency')
         self.exchange_id = kwargs.get('exchange_id')
@@ -41,8 +41,8 @@ class Balance:
         self.locked = kwargs.get('locked')
         self.total = kwargs.get('total')
         self.version = kwargs.get('version')
-        self.event_time = kwargs.get('event_time')
-        self.processing_time = kwargs.get('processing_time')
+        self.exchange_timestamp = kwargs.get('exchange_timestamp')
+        self.app_create_timestamp = kwargs.get('app_create_timestamp')
 
     # https://stackoverflow.com/questions/390250/elegant-ways-to-support-equivalence-equality-in-python-classes
     def __eq__(self, other):

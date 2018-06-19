@@ -11,10 +11,10 @@ class TickerDao(Dao):
     def __init__(self):
         super().__init__(dto_class=SqlAlchemyTickerDto)
 
-    def fetch_by_event_time_between_range(self, session, start, end):
+    def fetch_by_exchange_timestamp_between_range(self, session, start, end):
         try:
-            ticker_daos = session.query(SqlAlchemyTickerDto).filter(and_(SqlAlchemyTickerDto.event_time >= start,
-                                                                         SqlAlchemyTickerDto.event_time < end)).all()
+            ticker_daos = session.query(SqlAlchemyTickerDto).filter(and_(SqlAlchemyTickerDto.exchange_timestamp >= start,
+                                                                         SqlAlchemyTickerDto.exchange_timestamp < end)).all()
             tickers = [ticker_dao.to_popo() for ticker_dao in ticker_daos]
 
             return tickers
@@ -23,9 +23,9 @@ class TickerDao(Dao):
             session.rollback()
             raise exception
 
-    def fetch_by_event_time_gte_range(self, session, start):
+    def fetch_by_exchange_timestamp_gte_range(self, session, start):
         try:
-            ticker_daos = session.query(SqlAlchemyTickerDto).filter(SqlAlchemyTickerDto.event_time >= start).all()
+            ticker_daos = session.query(SqlAlchemyTickerDto).filter(SqlAlchemyTickerDto.exchange_timestamp >= start).all()
             tickers = [ticker_dao.to_popo() for ticker_dao in ticker_daos]
 
             return tickers

@@ -41,7 +41,7 @@ def bid_ask_df_from_ob_file(fpath):
     else:
         raise Exception("Data does not make sense. Please check it.")
 
-    res.columns = ['event_time', 'bid', 'ask']
+    res.columns = ['exchange_timestamp', 'bid', 'ask']
 
     check = res['bid'] > res['ask']
     if check.any():
@@ -82,17 +82,17 @@ def main(exchange_name, pair, source_filepath, target_filepath):
         orders['base'] = pair.base
         orders['quote'] = pair.quote
         orders['exchange_name'] = exchange_name
-        orders['processing_time'] = orders['event_time']
+        orders['app_create_timestamp'] = orders['exchange_timestamp']
         orders['version'] = 2
 
-        file_date = str(pd.to_datetime(orders['event_time'].values.min(), unit='ms').date())
+        file_date = str(pd.to_datetime(orders['exchange_timestamp'].values.min(), unit='ms').date())
         dest_fname = '{0}_{1}_ticker_v2_{2}.csv'.format(exchange_name, pair.kaiko_name, file_date)
         dest_path = os.path.join(target_filepath, pair.kaiko_name, dest_fname)
         FileService.create_dirs_if_null([dest_path])
         # write to file
         orders[['ask', 'bid', 'base', 'exchange_name',
-                'event_time', 'quote',
-                'processing_time', 'version']].to_csv(dest_path, index=False)
+                'exchange_timestamp', 'quote',
+                'app_create_timestamp', 'version']].to_csv(dest_path, index=False)
 
     print('Success: order_book data to tickers for exchange {0} and pair {1}'.format(exchange_name, pair))
 

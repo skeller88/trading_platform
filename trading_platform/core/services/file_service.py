@@ -126,9 +126,9 @@ class FileService:
                         continue
                     pair_name = Pair(base=ticker.base, quote=ticker.quote).name
                     # Need to address the issue that exchange data is not in UTC :/.
-                    #                             event_time = ticker.event_time / 1000
-                    event_time = ticker.processing_time
-                    if not start_timestamp <= event_time < end_timestamp:
+                    #                             exchange_timestamp = ticker.exchange_timestamp / 1000
+                    exchange_timestamp = ticker.app_create_timestamp
+                    if not start_timestamp <= exchange_timestamp < end_timestamp:
                         print('#', end='')
                         continue
 
@@ -148,7 +148,7 @@ class FileService:
                    (tdf['base'] != '456')] \
             .drop_duplicates().copy()
 
-        ftdf['pd_datetime'] = pd.to_datetime((ftdf['processing_time'] * 1e9) \
+        ftdf['pd_datetime'] = pd.to_datetime((ftdf['app_create_timestamp'] * 1e9) \
                                              .astype(int), unit='ns')
 
         c = ftdf.groupby([pd.Grouper(key='pd_datetime', freq=ticker_freq),

@@ -87,9 +87,9 @@ class TestBinanceLiveService(TestLiveExchangeService):
 
             # Unlike Binance, Bittrex create limit order responses don't have the following fields
             numerical_fields = ['amount', 'filled', 'price', 'remaining']
-            fields_to_ignore = ['processing_time',
-                                'event_time'] + numerical_fields if self.live_service_class.exchange_id == exchange_ids.bittrex else [
-                'processing_time']
+            fields_to_ignore = ['app_create_timestamp',
+                                'exchange_timestamp'] + numerical_fields if self.live_service_class.exchange_id == exchange_ids.bittrex else [
+                'app_create_timestamp']
 
             open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order])
             assert_true(len(open_orders) >= 1)

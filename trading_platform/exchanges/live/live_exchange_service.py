@@ -317,8 +317,8 @@ class LiveExchangeService(ExchangeServiceAbc):
                 'locked': locked,
                 'total': total,
                 'version': 0,
-                'event_time': None,
-                'processing_time': utc_timestamp(),
+                'exchange_timestamp': None,
+                'app_create_timestamp': utc_timestamp(),
             }
             self.__balances[currency] = Balance(**kwargs)
 

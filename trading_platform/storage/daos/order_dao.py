@@ -13,7 +13,7 @@ class OrderDao(Dao):
 
     def fetch_earliest_with_order_id(self, session, order_id) -> Optional[Order]:
         """
-        Fetch the order with the earliest processing_time.
+        Fetch the order with the earliest app_create_timestamp.
         Args:
             session:
             order_id:
@@ -23,7 +23,7 @@ class OrderDao(Dao):
         """
         try:
             dto = session.query(self.dto_class).filter_by(order_id=order_id).order_by(
-                SqlAlchemyOrderDto.processing_time).first()
+                SqlAlchemyOrderDto.app_create_timestamp).first()
 
             if dto is not None:
                 return dto.to_popo()
@@ -37,8 +37,9 @@ class OrderDao(Dao):
 
     def fetch_latest_with_order_id(self, session, order_id) -> Optional[Order]:
         """
-        Fetch the order with the most recent/latest processing_time. Only used in testing for now to check
-        updated Order state after an arbitrage step.
+        Fetch the order with the most recent/latest order_status and app_create_timestamp. This logic depends on
+        the possible order statuses in OrderStatus being ints in chronological order. In other words,
+        OrderStatus.pending == 0, and OrderStatus.open == 1. An order will always be pending before it is open.
         Args:
             session:
             order_id:
@@ -48,7 +49,7 @@ class OrderDao(Dao):
         """
         try:
             dto = session.query(self.dto_class).filter_by(order_id=order_id).order_by(
-                SqlAlchemyOrderDto.order_status.desc(), SqlAlchemyOrderDto.processing_time.desc()).first()
+                SqlAlchemyOrderDto.order_status.desc(), SqlAlchemyOrderDto.app_create_timestamp.desc()).first()
 
             if dto is not None:
                 return dto.to_popo()

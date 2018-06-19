@@ -40,8 +40,8 @@ class TestDao(unittest.TestCase):
     def test_save_and_commit(self):
         created = self.dao.save(session=self.session, commit=True, popo=self.dto1)
         assert_true(created.db_id)
-        assert_true(created.processing_time)
-        self.dto1.created_at = created.created_at
+        assert_true(created.app_create_timestamp)
+        self.dto1.db_create_timestamp = created.db_create_timestamp
         self.dto1.db_id = created.db_id
         eq_(created, self.dto1)
 

@@ -11,7 +11,7 @@ class SqlAlchemyBalanceDto(Base):
     # get balance by currency
     currency = Column(String(15), index=True, nullable=False)
     # get balance by processing time
-    processing_time = Column(Float, index=True, nullable=False)
+    app_create_timestamp = Column(Float, index=True, nullable=False)
     # get balance by exchange
     exchange_id = Column(Integer, index=True, nullable=False)
 
@@ -19,21 +19,21 @@ class SqlAlchemyBalanceDto(Base):
     locked = Column(Numeric, nullable=False)
     total = Column(Numeric, nullable=False)
 
-    event_time = Column(Float, nullable=True)
+    exchange_timestamp = Column(Float, nullable=True)
 
-    created_at = Column(Float, default=utc_timestamp, nullable=False)
-    updated_at = Column(Float, onupdate=utc_timestamp, nullable=True)
+    db_create_timestamp = Column(Float, default=utc_timestamp, nullable=False)
+    db_update_timestamp = Column(Float, onupdate=utc_timestamp, nullable=True)
     version = Column(Integer, nullable=False)
 
     def __repr__(self):
-        return "<SqlAlchemyBalanceDto(db_id='%s', processing_time='%s', currency='%s', exchange_id='%s')>" % (
-            self.db_id, self.processing_time, self.currency, self.exchange_id)
+        return "<SqlAlchemyBalanceDto(db_id='%s', app_create_timestamp='%s', currency='%s', exchange_id='%s')>" % (
+            self.db_id, self.app_create_timestamp, self.currency, self.exchange_id)
 
     def to_popo(self):
         kwargs = {
             'db_id': self.db_id,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at,
+            'db_create_timestamp': self.db_create_timestamp,
+            'db_update_timestamp': self.db_update_timestamp,
 
             'currency': self.currency.strip(),
             'exchange_id': self.exchange_id,
@@ -43,8 +43,8 @@ class SqlAlchemyBalanceDto(Base):
             'total': self.total,
 
             'version': self.version,
-            'event_time': self.event_time,
-            'processing_time': self.processing_time,
+            'exchange_timestamp': self.exchange_timestamp,
+            'app_create_timestamp': self.app_create_timestamp,
         }
 
         return Balance(**kwargs)
@@ -53,5 +53,5 @@ class SqlAlchemyBalanceDto(Base):
     def from_popo(popo):
         return SqlAlchemyBalanceDto(currency=popo.currency.strip(), exchange_id=popo.exchange_id, free=popo.free,
                                     locked=popo.locked,
-                                    total=popo.total, event_time=popo.event_time, processing_time=popo.processing_time,
+                                    total=popo.total, exchange_timestamp=popo.exchange_timestamp, app_create_timestamp=popo.app_create_timestamp,
                                     db_id=popo.db_id, version=popo.version)

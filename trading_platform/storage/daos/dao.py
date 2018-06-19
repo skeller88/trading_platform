@@ -71,9 +71,9 @@ class Dao:
             session.rollback()
             raise exception
 
-    def filter_processing_time_greater_than(self, session, processing_time) -> List:
+    def filter_app_create_timestamp_greater_than(self, session, app_create_timestamp) -> List:
         try:
-            dtos = session.query(self.dto_class).filter(self.dto_class.processing_time >= processing_time).order_by(self.dto_class.processing_time).all()
+            dtos = session.query(self.dto_class).filter(self.dto_class.app_create_timestamp >= app_create_timestamp).order_by(self.dto_class.app_create_timestamp).all()
 
             if dtos is not None:
                 return list(map(lambda dto: dto.to_popo(), dtos))

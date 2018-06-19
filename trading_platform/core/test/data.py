@@ -161,32 +161,32 @@ def balance(exchange_id):
         'locked': FinancialData(5),
         'total': FinancialData(15),
         'version': 0,
-        'event_time': now,
-        'processing_time': now,
+        'exchange_timestamp': now,
+        'app_create_timestamp': now,
     }
 
     return Balance(**kwargs)
 
 
 def order(exchange_id=exchange_ids.bittrex, order_status=OrderStatus.open, order_side=OrderSide.buy,
-          strategy_execution_id='0', processing_time=None, numerical_fields=True):
-    processing_time = datetime_operations.utc_timestamp() if processing_time is None else processing_time
+          strategy_execution_id='0', app_create_timestamp=None, numerical_fields=True):
+    app_create_timestamp = datetime_operations.utc_timestamp() if app_create_timestamp is None else app_create_timestamp
     kwargs = {
         # app metadata
-        'processing_time': processing_time,
+        'app_create_timestamp': app_create_timestamp,
         'version': Order.current_version,
 
         # database metadata
         'db_id': None,
-        'created_at': None,
-        'updated_at': None,
+        'db_create_timestamp': None,
+        'db_update_timestamp': None,
 
         'strategy_execution_id': strategy_execution_id,
 
         # exchange-related metadata
         'exchange_id': exchange_id,
-        'event_time': processing_time - 86000,
-        'exchange_order_id': str(processing_time),
+        'exchange_timestamp': app_create_timestamp - 86000,
+        'exchange_order_id': str(app_create_timestamp),
         'order_type': OrderType.limit,
 
         # order metadata
@@ -216,10 +216,10 @@ def high_low_tickers():
     base_kwargs = {
         'base': pair.base,
         'exchange_id': exchange_ids.bittrex,
-        'event_time': now,
+        'exchange_timestamp': now,
         'quote': pair.quote,
         'db_id': None,
-        'processing_time': now,
+        'app_create_timestamp': now,
         'version': Ticker.current_version
     }
 
@@ -249,10 +249,10 @@ def time_ordered_tickers():
     base_kwargs = {
         'base': pair.base,
         'exchange_id': exchange_ids.bittrex,
-        'event_time': now,
+        'exchange_timestamp': now,
         'quote': pair.quote,
         'db_id': None,
-        'processing_time': now,
+        'app_create_timestamp': now,
         'version': Ticker.current_version
     }
 
@@ -266,7 +266,7 @@ def time_ordered_tickers():
     second_kwargs['ask'] = 3
     second_kwargs['bid'] = 1
     second_kwargs['last'] = 2
-    second_kwargs['event_time'] = second_kwargs['event_time'] + seconds_per_hour
+    second_kwargs['exchange_timestamp'] = second_kwargs['exchange_timestamp'] + seconds_per_hour
     second = Ticker(**second_kwargs)
 
     return [first, second]

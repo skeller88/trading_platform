@@ -9,23 +9,23 @@ from trading_platform.utils.datetime_operations import utc_timestamp
 class SqlAlchemyTickerDto(Base):
     __tablename__ = 'tickers'
     db_id = Column(BigInteger, autoincrement=True, primary_key=True)
-    processing_time = Column(Float, index=True, nullable=False)
+    app_create_timestamp = Column(Float, index=True, nullable=False)
     exchange_id = Column(Integer, index=True, nullable=False)
     base = Column(String(15), index=True, nullable=False)
     quote = Column(String(15), index=True, nullable=False)
 
     ask = Column(DECIMAL(scale=FinancialData.decimal_scale), nullable=False)
     bid = Column(DECIMAL(scale=FinancialData.decimal_scale), nullable=False)
-    created_at = Column(Float, default=utc_timestamp, nullable=False)
-    updated_at = Column(Float, onupdate=utc_timestamp, nullable=True)
+    db_create_timestamp = Column(Float, default=utc_timestamp, nullable=False)
+    db_update_timestamp = Column(Float, onupdate=utc_timestamp, nullable=True)
     last = Column(Numeric, nullable=False)
 
-    event_time = Column(Float, nullable=True)
+    exchange_timestamp = Column(Float, nullable=True)
     version = Column(Integer, nullable=False)
 
     def __repr__(self):
-        return "<SqlAlchemyTickerDto(db_id='%s', processing_time='%s', quote='%s', base='%s')>" % (self.db_id,
-                                                                                                   self.processing_time,
+        return "<SqlAlchemyTickerDto(db_id='%s', app_create_timestamp='%s', quote='%s', base='%s')>" % (self.db_id,
+                                                                                                   self.app_create_timestamp,
                                                                                                    self.quote,
                                                                                                    self.base)
 
@@ -35,11 +35,11 @@ class SqlAlchemyTickerDto(Base):
             'bid': self.bid,
             'base': self.base.strip(),
             'exchange_id': self.exchange_id,
-            'event_time': self.event_time,
+            'exchange_timestamp': self.exchange_timestamp,
             'last': self.last,
             'quote': self.quote.strip(),
             'db_id': self.db_id,
-            'processing_time': self.processing_time,
+            'app_create_timestamp': self.app_create_timestamp,
             'version': self.version
         }
         return Ticker(**kwargs)
@@ -47,6 +47,6 @@ class SqlAlchemyTickerDto(Base):
     @staticmethod
     def from_popo(popo):
         return SqlAlchemyTickerDto(ask=popo.ask, base=popo.base, bid=popo.bid, exchange_id=popo.exchange_id,
-                                   event_time=popo.event_time, last=popo.last, created_at=popo.created_at,
-                                   updated_at=popo.updated_at, processing_time=popo.processing_time, quote=popo.quote,
+                                   exchange_timestamp=popo.exchange_timestamp, last=popo.last, db_create_timestamp=popo.db_create_timestamp,
+                                   db_update_timestamp=popo.db_update_timestamp, app_create_timestamp=popo.app_create_timestamp, quote=popo.quote,
                                    db_id=popo.db_id, version=popo.version)

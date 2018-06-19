@@ -13,7 +13,7 @@ def eq_ignore_certain_fields(a, b, fields_to_ignore):
 
 def compare_orders(order1, order2):
     numerical_fields = ['amount', 'filled', 'price', 'remaining']
-    fields_to_ignore = ['processing_time', 'event_time'] + numerical_fields
+    fields_to_ignore = ['app_create_timestamp', 'exchange_timestamp'] + numerical_fields
     eq_ignore_certain_fields(order1, order2, fields_to_ignore=fields_to_ignore)
     for field in numerical_fields:
         assert_almost_equal(order1.__dict__.get(field), order2.__dict__.get(field),

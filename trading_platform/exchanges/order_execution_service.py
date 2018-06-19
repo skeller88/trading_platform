@@ -23,7 +23,7 @@ class OrderExecutionService:
         self.sleep_time_sec_between_order_checks = kwargs.get('sleep_time_sec_between_order_checks', 4)
 
         if self.multithreaded:
-            self.thread_pool_executer = ThreadPoolExecutor(max_workers=10)
+            self.thread_pool_executer: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=10)
 
     def execute_order_set(self, orders: Set[Order], session: Session, write_pending_order: bool,
                           check_if_orders_filled: bool) -> Dict[str, Order]:
@@ -35,7 +35,8 @@ class OrderExecutionService:
         order_dict = {order.order_id: order for order in executed_orders}
         return order_dict
 
-    def execute_order(self, order: Order, session: Session, write_pending_order: bool, check_if_order_filled: bool) -> Order:
+    def execute_order(self, order: Order, session: Session, write_pending_order: bool,
+                      check_if_order_filled: bool) -> Order:
         """
 
         Args:
@@ -53,8 +54,7 @@ class OrderExecutionService:
             order.order_side))
 
         exchange = self.exchanges_by_id.get(order.exchange_id)
-        exchange_method_name = 'create_limit_buy_order' if order.order_side == OrderSide.buy else 'create_limit_sell_order'
-        exchange_method = getattr(exchange, exchange_method_name)
+        exchange_method = exchange.create_limit_buy_order if order.order_side == OrderSide.buy else exchange.create_limit_sell_order
 
         try:
             if write_pending_order:
@@ -106,7 +106,7 @@ class OrderExecutionService:
         """
         TODO - this method isn't necessary yet, but implement it.
 
-        Update order placed with order. Assumes that updated_order has already been placed.
+        Cancel the previously order placed with a new order. Assumes that updated_order has already been placed.
 
         Args:
             order:
@@ -118,11 +118,10 @@ class OrderExecutionService:
         self.logger.info('updating order')
 
         exchange = self.exchanges_by_id.get(order.exchange_id)
-        exchange_method_name = 'create_limit_buy_order' if order.order_side == OrderSide.buy else 'create_limit_sell_order'
-        exchange_method = getattr(exchange, exchange_method_name)
+        exchange_method = exchange.create_limit_buy_order if order.order_side == OrderSide.buy else exchange.create_limit_sell_order
 
         order: Order = exchange.fetch_order(exchange_order_id=order.exchange_order_id,
-            symbol=self.pair.name_for_exchange_clients)
+                                            symbol=self.pair.name_for_exchange_clients)
         # TODO will order_status ever == filled?
         if order.order_status == OrderStatus.filled:
             self.logger.info('sell order filled - exchange_exchange_order_id - {0}'.format(

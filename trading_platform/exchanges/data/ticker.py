@@ -8,10 +8,10 @@ class Ticker:
     """
     Represents ticker data for a given bid currency and quote currency.
 
-    created_at: when entity was created by the database
-    event_time: when the entity was created by the exchange
-    processing_time: when the arbitrage data was initially received by the application
-    updated_at: when entity was updated by the database
+    db_create_timestamp: when entity was created by the database
+    exchange_timestamp: when the entity was created by the exchange
+    app_create_timestamp: when the arbitrage data was initially received by the application
+    db_update_timestamp: when entity was updated by the database
 
     Application
     - used to determine arbitrage opportunities
@@ -38,15 +38,15 @@ class Ticker:
         'base',
         'quote',
         'exchange_id',
-        'processing_time',
+        'app_create_timestamp',
         'version'
     ]
 
     nullable_fields = [
         'db_id',
-        'created_at',
-        'updated_at',
-        'event_time'
+        'db_create_timestamp',
+        'db_update_timestamp',
+        'exchange_timestamp'
     ]
 
     def __init__(self, **kwargs):
@@ -56,8 +56,8 @@ class Ticker:
         :param version:
         :param quote:
         :param db_id:
-        :param processing_time:
-        :param event_time:
+        :param app_create_timestamp:
+        :param exchange_timestamp:
         :param base:
         :param last: last price
         :param exchange:
@@ -70,12 +70,12 @@ class Ticker:
         self.quote = kwargs.get('quote')
 
         self.exchange_id = kwargs.get('exchange_id')
-        self.event_time = kwargs.get('event_time')
+        self.exchange_timestamp = kwargs.get('exchange_timestamp')
 
-        self.processing_time = kwargs.get('processing_time') if kwargs.get('processing_time') is not None else utc_timestamp()
+        self.app_create_timestamp = kwargs.get('app_create_timestamp') if kwargs.get('app_create_timestamp') is not None else utc_timestamp()
         self.db_id = kwargs.get('db_id')
-        self.created_at = kwargs.get('created_at')
-        self.updated_at = kwargs.get('updated_at')
+        self.db_create_timestamp = kwargs.get('db_create_timestamp')
+        self.db_update_timestamp = kwargs.get('db_update_timestamp')
         self.version = kwargs.get('version')
 
     # https://stackoverflow.com/questions/390250/elegant-ways-to-support-equivalence-equality-in-python-classes
@@ -115,7 +115,7 @@ class Ticker:
             'ask': standardizers.bid_or_ask(ticker.get('ask')),
             'bid': standardizers.bid_or_ask(ticker.get('bid')),
             'exchange_id': exchange_id,
-            'event_time': ticker.get('timestamp'),
+            'exchange_timestamp': ticker.get('timestamp'),
             'last': standardizers.last(ticker.get('last')),
             'version': version,
 
@@ -159,8 +159,8 @@ class Ticker:
             'quote',
 
             'exchange_id',
-            'event_time',
-            'processing_time',
+            'exchange_timestamp',
+            'app_create_timestamp',
 
             'version'
         ]

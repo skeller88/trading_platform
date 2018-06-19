@@ -30,37 +30,37 @@ class TestTickerDao(TestDao):
         self.dto1 = tickers[0]
         self.dto2 = tickers[1]
 
-    def test_fetch_by_event_time_between_range(self):
+    def test_fetch_by_exchange_timestamp_between_range(self):
         created = self.dao.bulk_save(session=self.session, commit=True,
                                                      popos=[self.dto1, self.dto2])
 
-        # start time > event_time of all tickers. Should return no tickers.
-        fetched = self.dao.fetch_by_event_time_between_range(start=(self.dto2.event_time +
+        # start time > exchange_timestamp of all tickers. Should return no tickers.
+        fetched = self.dao.fetch_by_exchange_timestamp_between_range(start=(self.dto2.exchange_timestamp +
                                                                                     SECONDS_PER_MIN),
                                                                              end=utc_timestamp(), session=self.session)
         eq_(0, len(fetched))
 
-        fetched = self.dao.fetch_by_event_time_between_range(start=self.dto2.event_time,
-                                                                    end=self.dto2.event_time + SECONDS_PER_MIN,
+        fetched = self.dao.fetch_by_exchange_timestamp_between_range(start=self.dto2.exchange_timestamp,
+                                                                    end=self.dto2.exchange_timestamp + SECONDS_PER_MIN,
                                                                              session=self.session)
         eq_(1, len(fetched))
 
-        fetched = self.dao.fetch_by_event_time_between_range(start=self.dto1.event_time,
-                                                                    end=self.dto2.event_time + SECONDS_PER_MIN,
+        fetched = self.dao.fetch_by_exchange_timestamp_between_range(start=self.dto1.exchange_timestamp,
+                                                                    end=self.dto2.exchange_timestamp + SECONDS_PER_MIN,
                                                                              session=self.session)
         eq_(2, len(fetched))
 
-    def test_fetch_by_event_time_gte_range(self):
+    def test_fetch_by_exchange_timestamp_gte_range(self):
         created = self.dao.bulk_save(session=self.session, commit=True,
                                                      popos=[self.dto1, self.dto2])
 
-        # start time > event_time of all tickers. Should return no tickers.
-        fetched = self.dao.fetch_by_event_time_gte_range(start=self.dto2.event_time + SECONDS_PER_MIN,
+        # start time > exchange_timestamp of all tickers. Should return no tickers.
+        fetched = self.dao.fetch_by_exchange_timestamp_gte_range(start=self.dto2.exchange_timestamp + SECONDS_PER_MIN,
                                                                          session=self.session)
         eq_(0, len(fetched))
 
-        fetched = self.dao.fetch_by_event_time_gte_range(start=self.dto2.event_time, session=self.session)
+        fetched = self.dao.fetch_by_exchange_timestamp_gte_range(start=self.dto2.exchange_timestamp, session=self.session)
         eq_(1, len(fetched))
 
-        fetched = self.dao.fetch_by_event_time_gte_range(start=self.dto1.event_time, session=self.session)
+        fetched = self.dao.fetch_by_exchange_timestamp_gte_range(start=self.dto1.exchange_timestamp, session=self.session)
         eq_(2, len(fetched))

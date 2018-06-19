@@ -24,12 +24,12 @@ class TickerEtlService:
 
         for ticker_file in ticker_files:
             df = pandas.read_csv(ticker_file)
-            df.processing_time = pandas.to_datetime(df.processing_time.astype(int), unit='s')
+            df.app_create_timestamp = pandas.to_datetime(df.app_create_timestamp.astype(int), unit='s')
             group_columns = ['exchange_name', 'quote', 'base']
             g = df.groupby(group_columns).groups
             for gr, data in g.items():
                 df_subset = df.iloc[data]
-                file_date = str(int(df_subset.processing_time.min().timestamp()))
+                file_date = str(int(df_subset.app_create_timestamp.min().timestamp()))
                 pair_name = '{0}{1}'.format(gr[1], gr[2])
                 group_dir = os.path.join(output_dir, gr[0], pair_name)
                 self.file_service.create_dir_if_null(group_dir)
@@ -57,15 +57,15 @@ class TickerEtlService:
 
         def run(df):
             # TODO: this aggregates blindly assuming only 1 pair, if multiple pairs this needs to change
-            columns = filter(lambda column: column not in ['processing_time', 'exchange_id'], df.columns)
-            pt = df.pivot_table(index=pandas.Grouper(key='processing_time', freq=freq),
+            columns = filter(lambda column: column not in ['app_create_timestamp', 'exchange_id'], df.columns)
+            pt = df.pivot_table(index=pandas.Grouper(key='app_create_timestamp', freq=freq),
                                 columns=['exchange_id'],
                                 values=columns,
                                 aggfunc=agg_func)
 
             # rearrange data in backtest ready schema
             resdf = pandas.DataFrame(index=pt.index)
-            resdf['processing_time'] = pt.index
+            resdf['app_create_timestamp'] = pt.index
             return resdf
 
 

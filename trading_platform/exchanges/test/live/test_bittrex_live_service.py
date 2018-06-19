@@ -5,12 +5,12 @@ Exchanges won't allow for multiple accounts per exchange. So, the same exchange 
 and testing. This creates some trickiness, for example, when asserting the number of open orders is as expected,
 the number of open orders could vary depending on which production orders were placed.
 """
-from copy import copy
 from time import sleep
 from typing import Dict
 
 from nose.tools import eq_, assert_almost_equal, assert_true
 
+from trading_platform.core.test.util_methods import eq_ignore_certain_fields
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
@@ -19,7 +19,6 @@ from trading_platform.exchanges.data.financial_data import zero, FinancialData, 
 from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.utils import check_required_fields
 from trading_platform.exchanges.live.bittrex_live_service import BittrexLiveService
-from trading_platform.core.test.util_methods import eq_ignore_certain_fields
 from trading_platform.exchanges.test.live.test_live_exchange_service import TestLiveExchangeService
 
 
@@ -28,9 +27,18 @@ class TestBittrexLiveService(TestLiveExchangeService):
     live_service_class = BittrexLiveService
     xrp_tag_len = 10
 
-    def test_fetch_order(self):
+    def test_fetch_filled_order(self):
+        """
+        Fetch an order that's been filled. Responses should be as expected.
+
+        Returns:
+
+        """
         exchange_order_id: str = '54ee8a42-0354-423e-9d23-8226c4a8e9c7'
         order: Order = self.service.fetch_order(exchange_order_id=exchange_order_id)
+        check_required_fields(order)
+        eq_(order.exchange_id, self.live_service_class.exchange_id)
+        eq_()
 
     def test_order_crud(self):
         """
@@ -75,7 +83,7 @@ class TestBittrexLiveService(TestLiveExchangeService):
         fields_to_ignore = [
             'exchange_order_id',
             'order_status',
-            'processing_time'
+            'app_create_timestamp'
         ]
 
         buy_amount = self.service.get_balance(self.pair.base).free / quote_buy_price * FinancialData(.9)
@@ -142,9 +150,9 @@ class TestBittrexLiveService(TestLiveExchangeService):
             sleep(self.sleep_sec_consistency)
 
             # Unlike Binance, Bittrex create limit order responses don't have the following fields
-            fields_to_ignore = ['processing_time',
-                                'event_time'] + Order.financial_data_fields if self.live_service_class.exchange_id == exchange_ids.bittrex else [
-                'processing_time']
+            fields_to_ignore = ['app_create_timestamp',
+                                'exchange_timestamp'] + Order.financial_data_fields if self.live_service_class.exchange_id == exchange_ids.bittrex else [
+                'app_create_timestamp']
 
             open_orders = self.fetch_open_orders_for_order_instances(self.service, [buy_order, sell_order])
             assert_true(len(open_orders) >= 2)

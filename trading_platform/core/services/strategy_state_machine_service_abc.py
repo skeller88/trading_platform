@@ -8,18 +8,15 @@ from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
-from trading_platform.storage.daos.open_order_dao import OpenOrderDao
 from trading_platform.storage.daos.order_dao import OrderDao
 
 
 class StrategyStateMachineServiceAbc(ABC):
-    def __init__(self, state: Dict, logger, exchanges_by_id: Dict[int, ExchangeServiceAbc],
-                 open_order_dao: OpenOrderDao, order_dao: OrderDao):
+    def __init__(self, state: Dict, logger, exchanges_by_id: Dict[int, ExchangeServiceAbc], order_dao: OrderDao):
         self.logger = logger
         self.state: Dict = state
         self.exchanges_by_id: Dict[int, ExchangeServiceAbc] = exchanges_by_id
         self.order_dao = order_dao
-        self.open_order_dao = open_order_dao
 
     def next_state(self, next: Optional[Callable] = None, *args, **kwargs):
         current = self.state['current_state']

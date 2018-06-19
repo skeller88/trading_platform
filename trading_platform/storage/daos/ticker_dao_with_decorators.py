@@ -65,11 +65,11 @@ class TickerDaoWithDecorators:
 
         return session, None
 
-    def fetch_by_event_time_between_range(self, session, start, end):
+    def fetch_by_exchange_timestamp_between_range(self, session, start, end):
         @with_read_session(session=session)
         def inner():
-            return session.query(SqlAlchemyTickerDto).filter(and_(SqlAlchemyTickerDto.event_time >= start,
-                                                                  SqlAlchemyTickerDto.event_time < end)).all()
+            return session.query(SqlAlchemyTickerDto).filter(and_(SqlAlchemyTickerDto.exchange_timestamp >= start,
+                                                                  SqlAlchemyTickerDto.exchange_timestamp < end)).all()
 
         session, ticker_daos = inner()
         print(ticker_daos)
@@ -77,10 +77,10 @@ class TickerDaoWithDecorators:
 
         return session, tickers
 
-    def fetch_by_event_time_gte_range(self, session, start):
+    def fetch_by_exchange_timestamp_gte_range(self, session, start):
         @with_read_session(session=session)
         def inner():
-            return session.query(SqlAlchemyTickerDto).filter(SqlAlchemyTickerDto.event_time >= start).all()
+            return session.query(SqlAlchemyTickerDto).filter(SqlAlchemyTickerDto.exchange_timestamp >= start).all()
 
         session, ticker_daos = inner()
         tickers = [ticker_dao.to_popo() for ticker_dao in ticker_daos]

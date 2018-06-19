@@ -7,8 +7,8 @@ v4_fieldnames = [
     'base',
     'quote',
     'exchange_id',
-    'event_time',
-    'processing_time',
+    'exchange_timestamp',
+    'app_create_timestamp',
     'version'
 ]
 

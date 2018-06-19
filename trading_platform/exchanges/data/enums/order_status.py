@@ -34,3 +34,17 @@ class OrderStatus:
         'filled': 6,
     }
 
+    @classmethod
+    def from_exchange_string(cls, exchange_string: str):
+        """
+        Args:
+            exchange_string:
+
+        Returns: OrderStatus
+
+        """
+        if exchange_string == 'canceled':
+            exchange_string = 'cancelled'
+
+        return cls.statuses_to_names.get(exchange_string)
+

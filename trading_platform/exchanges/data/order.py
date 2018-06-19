@@ -2,8 +2,11 @@ from copy import deepcopy
 from typing import Dict
 
 from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
+from trading_platform.exchanges.data.enums.order_type import OrderType
 from trading_platform.exchanges.data.financial_data import FinancialData, zero
+from trading_platform.exchanges.data.pair import Pair
 from trading_platform.utils.datetime_operations import utc_timestamp, microsecond_timestamp_to_second_timestamp
 
 STRFTIME_MICROSECONDS = '%Y-%m-%dT%H:%M:%SZ'
@@ -20,9 +23,7 @@ class Order:
     bittrex-123 - eth-xmr - 10 - 10 - filled
     binance-567 - eth-powr - 5 - 10 - cancelled
 
-    Order on an exchange. Can be open, cancelled, partially filled, or filled. Each ArbitrageAttempt has two Orders
-    associated with it. An Order that's open will have an OpenOrder associated with it. Associations occur via the
-    order_id field.
+    Order on an exchange. Can be open, cancelled, partially filled, or filled.
 
     Example of an open order:
     [{'info': {
@@ -57,7 +58,7 @@ class Order:
         'strategy_execution_id',
         'order_id',
         'version',
-        'processing_time',
+        'app_create_timestamp',
         'order_status',
     ]
 
@@ -84,12 +85,12 @@ class Order:
     nullable_fields = [
         # database metadata
         'db_id',
-        'created_at',
-        'updated_at',
+        'db_create_timestamp',
+        'db_update_timestamp',
 
         # exchange-related metadata
         # Binance returns the timestamp of an order, Bittrex doesn't
-        'event_time',
+        'exchange_timestamp',
 
         # Cancelled orders and orders returned from the open_orders table won't have the following numerical fields:
         'amount',
@@ -109,20 +110,20 @@ class Order:
     def __init__(self, **kwargs):
         """
         Nullable fields are
-        - updated_at
+        - db_update_timestamp
 
         Fields that will be created by core.market_Data.order.Order constructor:
         - order_id
-        - processing_time
+        - app_create_timestamp
 
         Fields that will be created by the database:
         - db_id
-        - created_at
-        - updated_at
+        - db_create_timestamp
+        - db_update_timestamp
 
         :param kwargs: Expected fields and their types
             # app metadata
-            processing_time: str. Time when the order was processed by the arbitrage_bot.
+            app_create_timestamp: str. Time when the order was processed by the arbitrage_bot.
             version: str
 
             # database metadata
@@ -136,12 +137,12 @@ class Order:
                 Can be either "exchange_id-exchange_order_id" or "[exchange_id]_[quote]_[base]_[order_type]_[price]_[amount]"
 
             margin: float
-            created_at: Decimal
-            updated_at: Decimal
+            db_create_timestamp: Decimal
+            db_update_timestamp: Decimal
 
             # exchange-related metadata
             exchange_id: int. core/market_data/enums/exchange_ids.py
-            event_time: Decimal. Time when the order was placed. Assumed to be in UTC.
+            exchange_timestamp: Decimal. Time when the order was placed. Assumed to be in UTC.
             exchange_order_id: str. Id of the order on the exchange
             order_type: int. core/market_data/enums/order_type.py
 
@@ -159,20 +160,20 @@ class Order:
             order_side: int. Side
         """
         # app data
-        processing_time = kwargs.get('processing_time')
+        app_create_timestamp = kwargs.get('app_create_timestamp')
         # Order instance could either be instantiated for the first time or populated with data from a DTO
-        self.processing_time = processing_time if processing_time is not None else utc_timestamp()
+        self.app_create_timestamp = app_create_timestamp if app_create_timestamp is not None else utc_timestamp()
         self.version = kwargs.get('version') if kwargs.get('version') is not None else 0
         self.strategy_execution_id = kwargs.get('strategy_execution_id', 0)
 
         # database data
         self.db_id = kwargs.get('db_id')
-        self.created_at = kwargs.get('created_at')
-        self.updated_at = kwargs.get('updated_at')
+        self.db_create_timestamp = kwargs.get('db_create_timestamp')
+        self.db_update_timestamp = kwargs.get('db_update_timestamp')
 
         # exchange-related data
         self.exchange_id = kwargs.get('exchange_id')
-        self.event_time = kwargs.get('event_time')
+        self.exchange_timestamp = kwargs.get('exchange_timestamp')
         self.exchange_order_id = kwargs.get('exchange_order_id')
         self.order_type = kwargs.get('order_type')
 
@@ -215,16 +216,16 @@ class Order:
 
     def to_dict(self):
         return {
-            'processing_time': self.processing_time,
+            'app_create_timestamp': self.app_create_timestamp,
             'version': self.version,
 
             'db_id': self.db_id,
             'order_id': self.order_id,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at,
+            'db_create_timestamp': self.db_create_timestamp,
+            'db_update_timestamp': self.db_update_timestamp,
 
             'exchange_id': self.exchange_id,
-            'event_time': self.event_time,
+            'exchange_timestamp': self.exchange_timestamp,
             'exchange_order_id': self.exchange_order_id,
             'order_type': self.order_type,
 
@@ -251,10 +252,10 @@ class Order:
         copy.order_status = OrderStatus.filled
         # A new instance needs to be saved to the db.
         copy.db_id = None
-        copy.created_at = None
-        copy.updated_at = None
+        copy.db_create_timestamp = None
+        copy.db_update_timestamp = None
 
-        copy.processing_time = utc_timestamp()
+        copy.app_create_timestamp = utc_timestamp()
 
         copy.filled = copy.amount
         copy.remaining = zero
@@ -311,37 +312,32 @@ class Order:
         Returns: Order
 
         """
-        # 'id': '309ab197-83e9-49e0-90ac-7c9942ec010b',
-        # 'timestamp': 1529193139011,
-        # 'datetime': '2018-06-16T23:52:19.110Z',
-        # 'lastTradeTimestamp': None,
-        # 'symbol': 'NEO/BTC',
-        # 'type': 'limit',
-        # 'side': 'buy',
-        # 'price': 0.00489211,
-        # 'cost': 0.01467633,
-        # 'average': None,
-        # 'amount': 3.0,
-        # 'filled': 0.0,
-        # 'remaining': 3.0,
-        # 'status': 'open',
-        remaining = order_data.get('remaining') if order_data.get('remaining') is not None else order_data.get('amount')
+        amount: FinancialData = order_data.get('amount')
+        remaining: FinancialData = order_data.get('remaining')
         kwargs = {
+            'exchange_id': exchange_id,
+            'exchange_order_id': order_data.get('id'),
+            'order_side': OrderSide.from_exchange_data(order_data.get('side')),
+            'order_status': OrderStatus.from_exchange_string(order_data.get('status')),
+            'order_type': OrderType.limit,
+
             # numerical data
-            'amount': FinancialData(order_data.get('amount')),
+            'amount': FinancialData(amount),
             'cost': FinancialData(order_data.get('cost')),
             'filled': FinancialData(order_data.get('filled')),
             'price': FinancialData(order_data.get('price')),
-            'remaining': FinancialData(remaining),
+            'remaining': remaining if remaining is not None else amount,
+            'average': FinancialData(order_data.get('average')),
         }
 
-        if exchange_id == exchange_ids.binance:
-            kwargs['exchange_order_id'] = order_data.get('id')
-        elif exchange_id == exchange_ids.bittrex:
-            kwargs['exchange_order_id'] = order_data.get('id')
+        if order_data.get('symbol'):
+            pair: Pair = Pair.from_exchange_client_string(order_data.get('symbol'))
+            if pair:
+                kwargs['base'] = pair.base
+                kwargs['quote'] = pair.quote
 
         if order_data.get('timestamp'):
-            kwargs['event_time'] = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
+            kwargs['exchange_timestamp'] = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
 
         return cls(**kwargs)
 
