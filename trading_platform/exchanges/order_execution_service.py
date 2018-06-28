@@ -70,8 +70,8 @@ class OrderExecutionService:
 
             return order_snapshot
         except Exception as ex:
-            raise ex
             self.logger.error(ex)
+            raise ex
 
     def poll_exchange_for_order_status(self, order_status: OrderStatus.filled, session: Session, order: Order) -> Order:
         """

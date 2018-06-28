@@ -14,12 +14,11 @@ setuptools.setup(
         'beautifulsoup4',
         'boto3',
         'ccxt',
-        # Don't import pandas and numpy for now because they take a long time to be built into a Docker image with
-        # an alpine base. If the strategy repo needs these dependencies, it can require those dependencies itself.
         'numpy',
         'pandas',
         'pg8000',
         'pytz',
+        'simplejson',
         'smart_open',
         'SQLAlchemy',
         'requests',

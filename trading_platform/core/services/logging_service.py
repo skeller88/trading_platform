@@ -15,7 +15,7 @@ class LoggingService:
     def get_default_formatter() -> logging.Formatter:
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         return formatter
-    
+
     @staticmethod
     def get_logger(name=None):
         return logging.getLogger(name)
