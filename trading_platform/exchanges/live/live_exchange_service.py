@@ -9,7 +9,6 @@ from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.deposit_destination import DepositDestination
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
-from trading_platform.exchanges.data.enums.order_status import OrderStatus
 from trading_platform.exchanges.data.financial_data import FinancialData, zero, one
 from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
@@ -280,25 +279,40 @@ class LiveExchangeService(ExchangeServiceAbc):
 
     def fetch_balances(self) -> Dict[str, Balance]:
         """
-        example Binance API response:
-        {'info': {'balances': [{'asset': 'BTC', 'free': '0.00000000', 'locked': '0.00000000'}
-        :return:
+        Reads API balance data into a Dict[str, Dict[str, float]]. Then converts
         """
         self.__balances = {}
 
         data = make_api_request(self.__client.fetch_balance)
 
+        currency_prop_name = None
+        free_prop_name = None
+        locked_prop_name = None
+
         if self.exchange_id == exchange_ids.bittrex:
-            balances = data.get('info')
+            balances: List[Dict] = data.get('info')
             currency_prop_name = 'Currency'
             free_prop_name = 'Available'
             locked_prop_name = 'Pending'
         elif self.exchange_id == exchange_ids.gdax:
-            balances: Dict[str, Dict] = {balance.get('Currency'): {
-                'free': balance.get('Available'),
-                'pending': balance.get('Pending'),
-                'balance': balance.get('Balance')
-            } for balance in data.get('info') if balance.get('Currency') is not None}
+            balances: List[Dict] = data.get('info')
+            currency_prop_name = 'Currency'
+            free_prop_name = 'Available'
+            locked_prop_name = 'Pending'
+        elif self.exchange_id == exchange_ids.kucoin:
+            balances: Dict[str, Dict] = {
+                balance.get('coinType'): {
+                    'free': max(balance.get('balance') - balance.get('freezeBalance'), 0),
+                    'pending': balance.get('freezeBalance'),
+                    'total': balance.get('balance')
+                } for balance in data.get('info') if balance.get('coinType') is not None
+            }
+            balances: List[Dict] = [{
+                'currency': balance.get('coinType'),
+                'free': max(balance.get('balance') - balance.get('freezeBalance'), 0),
+                'pending': balance.get('freezeBalance'),
+                'total': balance.get('balance')
+            } for balance in data.get('info') if balance.get('coinType') is not None]
         else:
             balances = data.get('info').get('balances')
             currency_prop_name = 'asset'
@@ -311,6 +325,10 @@ class LiveExchangeService(ExchangeServiceAbc):
 
         if balances is None:
             return self.__balances
+
+        currency_prop_name = 'currency' if currency_prop_name is not None else currency_prop_name
+        free_prop_name = 'free' if free_prop_name is not None else free_prop_name
+        locked_prop_name = 'locked' if locked_prop_name is not None else locked_prop_name
 
         for balance in balances:
             currency = balance.get(currency_prop_name)
@@ -332,9 +350,11 @@ class LiveExchangeService(ExchangeServiceAbc):
                 'exchange_timestamp': None,
                 'app_create_timestamp': utc_timestamp(),
             }
+
             self.__balances[currency] = Balance(**kwargs)
 
         return self.__balances
+
 
     ###########################################
     # Market state

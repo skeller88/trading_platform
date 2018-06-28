@@ -6,6 +6,7 @@ binance = 'Binance'
 bittrex = 'Bittrex'
 gdax = 'Gdax'
 kraken = 'Kraken'
+kucoin = 'Kucoin'
 poloniex = 'Poloniex'
 
-all_names = [binance, bittrex, gdax, kraken, poloniex]
+all_names = [binance, bittrex, gdax, kucoin, kraken, poloniex]

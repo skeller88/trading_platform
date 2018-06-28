@@ -19,6 +19,7 @@ from trading_platform.exchanges.data.financial_data import zero
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.utils import check_required_fields
 from trading_platform.exchanges.live.binance_live_service import BinanceLiveService
+from trading_platform.exchanges.live.kucoin_live_service import KucoinLiveService
 from trading_platform.exchanges.live.live_subclasses import exchange_service_credentials_for_exchange, \
     test_exchange_credentials_param, exchange_credentials_param
 from trading_platform.storage.daos.balance_dao import BalanceDao
@@ -28,8 +29,11 @@ from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
 class TestLiveExchangeService(unittest.TestCase):
     __test__ = False  # important, makes sure tests are not run on base class
     # Each inheritor of this class will set these values
-    live_service_class = BinanceLiveService
+    live_service_class = None
     xrp_tag_len = None
+
+    __test__ = True
+    live_service_class = KucoinLiveService
 
     @classmethod
     def setUpClass(cls):
@@ -72,10 +76,18 @@ class TestLiveExchangeService(unittest.TestCase):
         eq_(len(deposit_destination.address), 42)
         assert_true(deposit_destination.address.startswith('0x'))
         eq_(deposit_destination.status, 'ok')
-        eq_(deposit_destination.tag, None)
+
+        if self.live_service_class.exchange_id == exchange_ids.kucoin:
+            eq_(len(deposit_destination.tag), 24)
+        else:
+            eq_(deposit_destination.tag, None)
 
     def test_fetch_deposit_destination_with_tag(self):
+        if self.live_service_class.exchange_id == exchange_ids.kucoin:
+            return
+
         deposit_destination = self.service.fetch_deposit_destination('XRP', {})
+
         eq_(len(deposit_destination.address), 34)
         eq_(deposit_destination.status, 'ok')
         eq_(len(deposit_destination.tag), self.xrp_tag_len)

@@ -5,12 +5,14 @@ bittrex = 1
 gdax = 2
 kraken = 3
 poloniex = 4
+kucoin = 5
 
 names_to_ids = {
     exchange_names.binance: binance,
     exchange_names.bittrex: bittrex,
     exchange_names.gdax: gdax,
     exchange_names.kraken: kraken,
+    exchange_names.kucoin: kucoin,
     exchange_names.poloniex: poloniex,
 }
 
