@@ -7,8 +7,7 @@ from trading_platform.exchanges.live.bittrex_live_service import BittrexLiveServ
 from trading_platform.exchanges.live.gdax_live_service import GdaxLiveService
 from trading_platform.exchanges.live.kraken_live_service import KrakenLiveService
 from trading_platform.exchanges.live.poloniex_live_service import PoloniexLiveService
-from trading_platform.exchanges.withdrawal_fees_service import WithdrawalFeesService
-from trading_platform.utils.parameter_store import get_parameter
+from trading_platform.aws_utils.parameter_store import get_parameter
 
 exchange_credentials_param = 'exchange_credentials'
 test_exchange_credentials_param = 'test_exchange_credentials'
@@ -38,7 +37,7 @@ def get_exchange_credentials_by_id(exchange_service_subclasses, param_name):
 
 
 def instantiate_live_test_exchanges(withdrawal_fees_by_exchange_id=None):
-    withdrawal_fees_by_exchange_id = withdrawal_fees_by_exchange_id if withdrawal_fees_by_exchange_id is not None else WithdrawalFeesService.by_exchange_ids()
+    withdrawal_fees_by_exchange_id = withdrawal_fees_by_exchange_id
     return instantiate(mvp_live(), param_name=test_exchange_credentials_param,
                        withdrawal_fees_by_exchange=withdrawal_fees_by_exchange_id)
 

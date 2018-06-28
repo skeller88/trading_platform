@@ -22,7 +22,7 @@ from collections import defaultdict
 from decimal import Decimal
 from functools import reduce
 from heapq import heappush, heappop
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.deposit_destination import DepositDestination
@@ -446,12 +446,12 @@ class BacktestExchangeService(ExchangeServiceAbc):
     def fetch_market_symbols(self):
         raise NotImplementedError('fetch_market_symbols')
 
-    def fetch_latest_tickers(self):
+    def fetch_latest_tickers(self) -> List[Ticker]:
         """
         Unlike LiveExchangeService, doesn't return latest tickers.
         :return list Ticker:
         """
-        return self.tickers.values()
+        return list(self.tickers.values())
 
     def set_tickers(self, tickers):
         self.tickers = tickers

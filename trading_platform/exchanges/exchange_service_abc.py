@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from decimal import Decimal
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.deposit_destination import DepositDestination
@@ -157,7 +157,7 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def fetch_latest_tickers(self):
+    def fetch_latest_tickers(self) -> List[Ticker]:
         pass
 
     @abstractmethod

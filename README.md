@@ -78,86 +78,11 @@ create database market_data;
 ```
 
 # AWS setup
-## Setup Terraform and AWS credentials for Terraform
- 
-[terraform docs](https://www.terraform.io/intro/getting-started/install.html)
-[boto docs](http://boto3.readthedocs.io/en/latest/guide/configuration.html)
 
-Create a new [IAM user](https://console.aws.amazon.com/iam/home?region=us-west-1#/users) for Terraform and an access
-key. That provides Terraform with access to AWS resources, but not root access, which can be abused. The Terraform
-user should have the following policies attached:
-- AmazonEC2FullAccess
-- AWSLambdaFullAccess
-- AmazonRDSFullAccess
-- AmazonS3FullAccess
-- AmazonSNSFullAccess
-- AmazonSSMFullAccess
-
-And the following inline policy:
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "Stmt1482712489000",
-            "Effect": "Allow",
-            "Action": [
-                "iam:*"
-            ],
-            "Resource": [
-                "*"
-            ]
-        }
-        {
-            "Sid": "Stmt1482712489000",
-            "Effect": "Allow",
-            "Action": [
-                "kms:*"
-            ],
-            "Resource": [
-                "*"
-            ]
-        }
-    ]
-}
-```
-
-Save the Terraform secret and key in a `~/.aws/credentials` file, creating a parent `.aws` folder if necessary:
-```
-[default]
-aws_access_key_id = <admin-access-key-id>
-aws_secret_access_key = <admin-access-secret>
-```
-
-## Create and configure key pair
-A key pair is needed in order to ssh into the bastion host from you local machine. Create a new key pair named 
-"bastion_host"  via the [AWS console](https://us-west-1.console.aws.amazon.com/ec2/v2/home?region=us-west-1#KeyPairs:sort=keyName) and the .pem file
-containing the private key will automatically be saved. Move the .pem file to `~/.aws`. 
-
-Change the permissions of the .pem file to make sure that your private key file isn't publicly viewable:
-`chmod 400 ~/.aws/<pem-file-name>`
-
-AWS has [more docs](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#retrieving-the-public-key)
-about key pairs. 
 
 ## Package AWS lambda and deploy Terraform infrastructure
 `deploy_lambda.sh` - runs `terraform apply` as part of the script. `deploy_lambda.sh stage` deploys any "dev" versions
 of the lambdas. `deploy_lambda.sh prod` deploys the prod versions. 
-
-## ssh to bastion host
-`bastion_ec2_public_dns` is output to the terminal by Terraform. Copy it and modify the script below:
-
-`ssh -i ~/.aws/bastion_host.pem ec2-user@<bastion_ec2_public_address>`
-
-## Create ssh tunnel to RDS instance
-[detailed instructions](https://userify.com/blog/howto-connect-mysql-ec2-ssh-tunnel-rds/)
-
-In one terminal window, create the ssh tunnel:
-
-`ssh -L 8000:<rds-host-address>:5432 -i ~/.aws/bastion_host.pem ec2-user@<bastion_ec2_public_address>`
-
-Then in another window, connect to the RDS instance:
-`psql --dbname=market_data --user=personbond --host=localhost --port=8000` 
 
 ## Add exchange API secrets to AWS Parameter Store
 Create an API key for each exchange that is being arbitraged. Record the key and secret. 
@@ -205,6 +130,3 @@ Add environment variables to PyCharm run configuration.
 
 All of the env variables that the arbitrage_executer lambda uses. See the .tf file. 
 
-
-# Destroy infrastructure with Terraform
-[Terraform documentation on destroy](https://www.terraform.io/intro/getting-started/destroy.html)

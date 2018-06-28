@@ -351,7 +351,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         tickers = make_api_request(self.__client.fetch_tickers)
 
         if tickers is None:
-            return
+            return []
 
         ticker_instances = []
         for ticker in tickers.values():
