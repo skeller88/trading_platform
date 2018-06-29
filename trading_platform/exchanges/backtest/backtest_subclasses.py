@@ -2,8 +2,9 @@
 These exchange services are used in backtests. They use in-memory data structures to maintain balance and order state
 while stub exchange operations such as buying, selling, and fetching balances. They fetch ticker data from csv files.
 """
-from trading_platform.exchanges.backtest.binance_backtest_service import BinanceBacktestExchangeService
-from trading_platform.exchanges.backtest.bittrex_backtest_service import BittrexBacktestExchangeService
+from trading_platform.exchanges.backtest.binance_backtest_service import BinanceBacktestService
+from trading_platform.exchanges.backtest.bittrex_backtest_service import BittrexBacktestService
+from trading_platform.exchanges.backtest.kucoin_backtest_service import KucoinBacktestService
 from trading_platform.exchanges.data.enums import exchange_ids
 
 
@@ -14,6 +15,7 @@ def instantiate():
     :return:
     """
     return {
-        exchange_ids.binance: BinanceBacktestExchangeService(),
-        exchange_ids.bittrex: BittrexBacktestExchangeService()
+        exchange_ids.binance: BinanceBacktestService(),
+        exchange_ids.bittrex: BittrexBacktestService(),
+        exchange_ids.kucoin: KucoinBacktestService()
     }

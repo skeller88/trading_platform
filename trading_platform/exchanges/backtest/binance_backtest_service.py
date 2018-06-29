@@ -4,7 +4,7 @@ from trading_platform.exchanges.data.financial_data import FinancialData
 from trading_platform.exchanges.withdrawal_fees_service import WithdrawalFeesService
 
 
-class BinanceBacktestExchangeService:
+class BinanceBacktestService:
     """
     Uses composition to delegate operations to an instance of BacktestExchangeService. See the BacktestExchangeService docstring for
     details of how that works. The instance exchange_name is set to the exchange_name of this class.
