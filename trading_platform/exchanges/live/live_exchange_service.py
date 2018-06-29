@@ -52,9 +52,17 @@ class LiveExchangeService(ExchangeServiceAbc):
         """
         if self.exchange_id == exchange_ids.binance:
             order.exchange_order_id = int(order.exchange_order_id)
+
+        if self.exchange_id == exchange_ids.kucoin:
+            params: Dict[str, str] = {
+                'type': 'BUY' if order.order_side == OrderSide.buy else 'SELL'
+            }
+        else:
+            params: Dict[str, str] = {}
+
         pair: Pair = Pair(base=order.base, quote=order.quote)
         try:
-            response = make_api_request(self.__client.cancel_order, order.exchange_order_id, pair.name_for_exchange_clients, {})
+            response = make_api_request(self.__client.cancel_order, order.exchange_order_id, pair.name_for_exchange_clients, params)
         except InvalidOrder as ex:
             if 'ORDER_NOT_OPEN' in ex.args[0]:
                 return None
@@ -62,7 +70,7 @@ class LiveExchangeService(ExchangeServiceAbc):
                 raise ex
 
         if response:
-            return order.copy_updated_with_create_or_cancel_order_exchange_response(response)
+            return order.copy_updated_with_cancel_order_exchange_response(response)
 
         raise Exception('Order was not cancelled', response)
 
@@ -77,8 +85,8 @@ class LiveExchangeService(ExchangeServiceAbc):
         return self.create_limit_order(order, **params)
 
     def create_limit_order(self, order: Order, **params) -> Optional[Order]:
-        if self.exchange_id == exchange_ids.bittrex:
-            # Bittrex integration expects floats
+        # These integrations expect floats
+        if self.exchange_id in [exchange_ids.bittrex, exchange_ids.kucoin]:
             amount = float(order.amount)
             price = float(order.price)
         else:
@@ -94,7 +102,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         if response is None:
             return
 
-        order_copy: Order = order.copy_updated_with_create_or_cancel_order_exchange_response(response)
+        order_copy: Order = order.copy_updated_with_create_order_exchange_response(response)
         return order_copy
 
     def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
@@ -134,7 +142,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         Returns:
 
         """
-        open_orders: Dict[str, Order] = {}
+        self.__orders: Dict[str, Order] = {}
         try:
             order_data_list = make_api_request(self.__client.fetch_open_orders, pair.name_for_exchange_clients)
         except ccxt.OrderNotFound:
@@ -146,9 +154,8 @@ class LiveExchangeService(ExchangeServiceAbc):
         for order_data in order_data_list:
             order: Order = Order.from_fetch_order_exchange_response(order_data, self.exchange_id)
             self.__orders[order.order_id] = order
-            open_orders[order.order_id] = order
 
-        return open_orders
+        return self.__orders
 
     def get_order(self, order_id) -> Optional[Order]:
         return self.__orders.get(order_id)
@@ -278,16 +285,9 @@ class LiveExchangeService(ExchangeServiceAbc):
         return balance if balance is not None else Balance.instance_with_zero_value_fields()
 
     def fetch_balances(self) -> Dict[str, Balance]:
-        """
-        Reads API balance data into a Dict[str, Dict[str, float]]. Then converts
-        """
         self.__balances = {}
 
         data = make_api_request(self.__client.fetch_balance)
-
-        currency_prop_name = None
-        free_prop_name = None
-        locked_prop_name = None
 
         if self.exchange_id == exchange_ids.bittrex:
             balances: List[Dict] = data.get('info')
@@ -300,35 +300,34 @@ class LiveExchangeService(ExchangeServiceAbc):
             free_prop_name = 'Available'
             locked_prop_name = 'Pending'
         elif self.exchange_id == exchange_ids.kucoin:
-            balances: Dict[str, Dict] = {
-                balance.get('coinType'): {
-                    'free': max(balance.get('balance') - balance.get('freezeBalance'), 0),
-                    'pending': balance.get('freezeBalance'),
-                    'total': balance.get('balance')
-                } for balance in data.get('info') if balance.get('coinType') is not None
-            }
-            balances: List[Dict] = [{
-                'currency': balance.get('coinType'),
-                'free': max(balance.get('balance') - balance.get('freezeBalance'), 0),
-                'pending': balance.get('freezeBalance'),
-                'total': balance.get('balance')
-            } for balance in data.get('info') if balance.get('coinType') is not None]
+            for balance in data.get('info'):
+                locked: FinancialData = FinancialData(balance.get('freezeBalance'))
+                total: FinancialData = FinancialData(balance.get('balance'))
+                free = max(total - locked, zero)
+                currency: str = balance.get('coinType')
+                kwargs = {
+                    'db_id': None,
+                    'currency': currency,
+                    'exchange_id': self.exchange_id,
+                    'free': free,
+                    'locked': locked,
+                    'total': total,
+                    'version': 0,
+                    'exchange_timestamp': None,
+                    'app_create_timestamp': utc_timestamp(),
+                }
+                balance_instance: Balance = Balance(**kwargs)
+                self.__balances[currency] = balance_instance
+
+            return self.__balances
         else:
             balances = data.get('info').get('balances')
             currency_prop_name = 'asset'
             free_prop_name = 'free'
             locked_prop_name = 'locked'
 
-        # Kraken example API response (Kraken is unused for now):
-        # {'info': [{'Currency': 'BTC', 'Balance': 0.0, 'Available': 0.0, 'Pending': 0.0, 'CryptoAddress': '1FdGHn9b9dzwfEfxnjK4DJoy45DnqzaQcF'}, ...]}
-        #
-
         if balances is None:
             return self.__balances
-
-        currency_prop_name = 'currency' if currency_prop_name is not None else currency_prop_name
-        free_prop_name = 'free' if free_prop_name is not None else free_prop_name
-        locked_prop_name = 'locked' if locked_prop_name is not None else locked_prop_name
 
         for balance in balances:
             currency = balance.get(currency_prop_name)

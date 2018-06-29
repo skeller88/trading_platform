@@ -17,15 +17,15 @@ class FinancialData:
     three_places = 3
     four_places = 4
     five_places = 5
-
+    six_places = 6
     eight_places = 8
 
     def __new__(cls, number):
         try:
-            # Bittrex precision for order numerical data is six places. In order to match an order_id in the database
-            # with the metadata of an order returned from the exchange, the app needs to round numerical fields to the
+            # Bittrex and Kucoin precision for order numerical data is six places. In order to match an order_id in the
+            # database with the metadata of an order returned from the exchange, the app needs to round numerical fields to the
             # sixth place as well.
-            converted = round(Decimal(number), cls.eight_places)
+            converted = round(Decimal(number), cls.six_places)
             return converted
         except Exception as ex:
             # This exception occurs so often, swallow it

@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import deepcopy, copy
 from typing import Dict
 
 from trading_platform.exchanges.data.enums import exchange_ids
@@ -73,13 +73,17 @@ class Order:
     ]
 
     index_fields = [
-        'strategy_execution_id',
         'exchange_id',
         'quote',
         'base',
         'order_side',
         'price',
         'amount'
+    ]
+
+    financial_data_index_fields = [
+        'amount',
+        'price'
     ]
 
     nullable_fields = [
@@ -195,10 +199,15 @@ class Order:
         if order_id is not None:
             self.order_id = order_id
         else:
-            self.order_id = '_'.join(map(lambda field: str(getattr(self, field)), self.index_fields))
-        # comment out for now because I don't want to deal with the Order in run_backtest having all of the required
-        # fields
-        # check_required_fields(self)
+            # Exchanges sometimes return floats, meaning that the value of the order "price" and "amount" fields will
+            # differ between the exchange (float type) and the app (FinancialData type). That means if the app needs
+            # to fetch open orders, the order_id won't match up.
+            def field_id_format(field):
+                field_value = getattr(self, field)
+                return str(field_value) if field not in self.financial_data_index_fields else str(
+                    round(field_value, FinancialData.five_places))
+
+            self.order_id = '_'.join(map(field_id_format, self.index_fields))
 
     # https://stackoverflow.com/questions/390250/elegant-ways-to-support-equivalence-equality-in-python-classes
     def __eq__(self, other):
@@ -261,10 +270,14 @@ class Order:
         copy.remaining = zero
         return copy
 
-    def copy_updated_with_create_or_cancel_order_exchange_response(self, order_data: Dict):
+    def copy_updated_with_create_order_exchange_response(self, order_data: Dict):
         """
         Construct an open order instance that's a copy of the current instance, but with certain fields
-        overwritten by the values in order_data from a create_limit_*_order or cancel_order exchange response.
+        overwritten by the values in order_data from a create_limit_*_order exchange response.
+
+        The most important fields that are overwritten are:
+        - exchange_order_id
+        - exchange_timestamp
 
         This method exists because the data returned from an exchange
         for a given Order may:
@@ -285,28 +298,38 @@ class Order:
             copy: Order
 
         """
-        copy: Order = deepcopy(self)
-        copy.exchange_order_id = order_data.get('id')
-        copy.order_status = OrderStatus.open
-        copy.app_create_timestamp = utc_timestamp()
+        instance_copy: Order = copy(self)
+        instance_copy.exchange_order_id = order_data.get('id')
+        instance_copy.app_create_timestamp = utc_timestamp()
+        instance_copy.order_status = OrderStatus.open
 
         if order_data.get('timestamp'):
-            copy.exchange_timestamp = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
+            instance_copy.exchange_timestamp = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
 
-        def overwrite_field_with_exchange_data(field):
-            value = order_data.get(field)
-            if value is not None:
-                instance_field_value = getattr(copy, field)
-                # TODO - print via logger.error instead
-                if value != instance_field_value:
-                    print('ERROR - order field {0} - instance value is {1}, exchange_data value is {2}'.format(field, value,
-                                                                                                       instance_field_value))
-                elif instance_field_value is None:
-                    print('ERROR - order field {0} - instance value and exchange_data value is None'.format(field))
-                setattr(copy, field, value)
+        # def overwrite_field_with_exchange_data(field):
+        #     value = order_data.get(field)
+        #     if value is not None and not is_kucoin_financial_field(field):
+        #         instance_field_value = getattr(instance_copy, field)
+        #         # TODO - print via logger
+        #         if value != instance_field_value:
+        #             print('order field {0} - instance value is {1}, exchange_data value is {2}'.format(field, value,
+        #                                                                                                instance_field_value))
+        #         elif instance_field_value is None:
+        #             print('ERROR - order field {0} - instance value and exchange_data value is None'.format(field))
+        #         setattr(instance_copy, field, value)
+        #
+        # [overwrite_field_with_exchange_data(field) for field in self.financial_data_fields]
+        return instance_copy
 
-        [overwrite_field_with_exchange_data(field) for field in self.financial_data_fields]
-        return copy
+    def copy_updated_with_cancel_order_exchange_response(self, order_data: Dict) -> 'Order':
+        instance_copy: Order = copy(self)
+        instance_copy.app_create_timestamp = utc_timestamp()
+        instance_copy.order_status = OrderStatus.cancelled_and_partially_filled if instance_copy.filled > zero else OrderStatus.cancelled
+
+        if order_data.get('timestamp'):
+            instance_copy.exchange_timestamp = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
+
+        return instance_copy
 
     @classmethod
     def from_fetch_order_exchange_response(cls, order_data, exchange_id=None):
