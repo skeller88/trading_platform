@@ -1,11 +1,5 @@
-from typing import Dict
-
-from trading_platform.exchanges.data.enums.order_side import OrderSide
-from trading_platform.exchanges.data.financial_data import one, FinancialData, zero
-from trading_platform.exchanges.data.order import Order
-from trading_platform.exchanges.test.live.test_live_exchange_service import TestLiveExchangeService
-
 from trading_platform.exchanges.live.kucoin_live_service import KucoinLiveService
+from trading_platform.exchanges.test.live.test_live_exchange_service import TestLiveExchangeService
 
 
 class TestKucoinLiveService(TestLiveExchangeService):

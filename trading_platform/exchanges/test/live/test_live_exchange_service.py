@@ -23,6 +23,7 @@ from trading_platform.exchanges.data.financial_data import zero, one, FinancialD
 from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.utils import check_required_fields
+from trading_platform.exchanges.live.kucoin_live_service import KucoinLiveService
 from trading_platform.exchanges.live.live_subclasses import exchange_service_credentials_for_exchange, \
     exchange_credentials_param
 from trading_platform.storage.daos.balance_dao import BalanceDao
@@ -40,7 +41,7 @@ class TestLiveExchangeService(unittest.TestCase):
     # Uncomment this line and one of the live_service_class definition lines to run a specific test of a specific
     # exchange
     __test__ = True
-    # live_service_class = KucoinLiveService
+    live_service_class = KucoinLiveService
     # live_service_class = BittrexLiveService
 
     @classmethod
