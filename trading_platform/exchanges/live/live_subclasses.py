@@ -6,6 +6,7 @@ from trading_platform.exchanges.live.binance_live_service import BinanceLiveServ
 from trading_platform.exchanges.live.bittrex_live_service import BittrexLiveService
 from trading_platform.exchanges.live.gdax_live_service import GdaxLiveService
 from trading_platform.exchanges.live.kraken_live_service import KrakenLiveService
+from trading_platform.exchanges.live.kucoin_live_service import KucoinLiveService
 from trading_platform.exchanges.live.poloniex_live_service import PoloniexLiveService
 from trading_platform.aws_utils.parameter_store import get_parameter
 
@@ -65,7 +66,8 @@ def all_live():
     work if the variables aren't declared in local scope.
     :return:
     """
-    return [BinanceLiveService, BittrexLiveService, GdaxLiveService, KrakenLiveService, PoloniexLiveService]
+    return [BinanceLiveService, BittrexLiveService, GdaxLiveService, KucoinLiveService, KrakenLiveService,
+            PoloniexLiveService]
 
 
 def mvp_live():

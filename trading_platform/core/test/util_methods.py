@@ -1,3 +1,4 @@
+import json
 import logging
 
 from nose.tools import eq_, assert_almost_equal
@@ -18,6 +19,12 @@ def compare_orders(order1, order2):
     for field in numerical_fields:
         assert_almost_equal(order1.__dict__.get(field), order2.__dict__.get(field),
                             places=FinancialData.five_places)
+
+
+def compare_dicts(dict1, dict2):
+    dict1_json = json.dumps(dict1, sort_keys=True, indent=2)
+    dict2_json = json.dumps(dict2, sort_keys=True, indent=2)
+    eq_(dict1_json, dict2_json)
 
 
 def disable_debug_logging():
