@@ -237,14 +237,18 @@ class LiveExchangeService(ExchangeServiceAbc):
     def fetch_deposit_destination(self, currency, params={}) -> DepositDestination:
         try:
             response = self.__client.fetch_deposit_address(currency)
-            # Make 'status' parameter consistent across exchanges.
-            if response['tag'] == '':
-                response['tag'] = None
-            return DepositDestination(response['address'], response['tag'], response['status'])
+            if response.get('info') and response['info'].get('success'):
+                # Make 'status' parameter consistent across exchanges.
+                if response['tag'] == '':
+                    response['tag'] = None
+                return DepositDestination(response['address'], response['tag'], DepositDestination.ok_status)
+            return DepositDestination(None, None, DepositDestination.offline_status)
         except ExchangeError as ex:
             if DepositDestination.offline_status in str(ex):
                 return DepositDestination(None, None, DepositDestination.offline_status)
-            raise ex
+
+            if not any(phrase in str(ex) for phrase in ['Does not have currency code','address is invalid']):
+                raise ex
 
     def withdraw_all(self, currency, address, tag=None, params={}):
         """

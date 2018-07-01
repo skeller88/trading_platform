@@ -11,6 +11,7 @@ from typing import Dict, Callable, List, Optional
 
 import pandas
 from nose.tools import eq_, assert_true, assert_greater, assert_almost_equals
+from trading_platform.exchanges.live.binance_live_service import BinanceLiveService
 
 from trading_platform.core.test.data import Defaults
 from trading_platform.core.test.util_methods import disable_debug_logging, eq_ignore_certain_fields
@@ -38,12 +39,11 @@ class TestLiveExchangeService(unittest.TestCase):
     # __test__ = True
     # live_service_class = KucoinLiveService
 
-    # live_service_class = BittrexLiveService
-
     @classmethod
     def setUpClass(cls):
         # Each inheritor of this class will set these values
         cls.live_service_class = None
+        cls.live_service_class = BinanceLiveService
         cls.xrp_tag_len = None
         # Bittrex in particular has slow consistency and takes a second or more for changes to be persisted.
         cls.sleep_sec_consistency = 4

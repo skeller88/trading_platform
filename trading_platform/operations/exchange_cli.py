@@ -5,6 +5,7 @@ Interact with exchanges without logging in or running tests. Common operations i
 - Placing orders
 - Checking order status
 """
+import json
 
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
@@ -68,12 +69,22 @@ order: Order = Order(**{
     'price': FinancialData(6200),
 })
 
+# with open('/Users/shanekeller/Documents/trading_platform/trading_platform/exchanges/data/cryptocurrencies.json', 'r') as f:
+#     crypto_json: str = json.load(f)
+#
+#     for market in crypto_json.keys():
+#         for exchange in [bittrex, binance]:
+#             dd = exchange.fetch_deposit_destination(market)
+#
+#             if dd is not None and dd.status != 'ok':
+#                 print(market, exchange.exchange_name, dd.status, '\n')
+
 # order_resp = bittrex.create_limit_sell_order(order)
 # print(order_resp.__dict__)
 
 # order = bittrex.cancel_order(order=order)
 # print(order.exchange_order_id)
-# exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7'
+
 # order = bittrex.fetch_order(exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7', pair=pair)
 # print(order.__dict__)
 # orders = bittrex.fetch_open_orders(pair=pair)
