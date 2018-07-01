@@ -5,118 +5,75 @@ Exchanges won't allow for multiple accounts per exchange. So, the same exchange 
 and testing. This creates some trickiness, for example, when asserting the number of open orders is as expected,
 the number of open orders could vary depending on which production orders were placed.
 """
-from time import sleep
-from typing import Dict
+from nose.tools import eq_
+from trading_platform.exchanges.data.financial_data import FinancialData
 
-from nose.tools import eq_, assert_almost_equal, assert_true
-
-from trading_platform.exchanges.data.enums import exchange_ids
-from trading_platform.exchanges.data.enums.order_side import OrderSide
-from trading_platform.exchanges.data.enums.order_status import OrderStatus
-from trading_platform.exchanges.data.enums.order_type import OrderType
-from trading_platform.exchanges.data.financial_data import zero, FinancialData, one
-from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
+
+from trading_platform.exchanges.data.enums.order_status import OrderStatus
+
 from trading_platform.exchanges.data.utils import check_required_fields
+
+from trading_platform.exchanges.data.order import Order
+
 from trading_platform.exchanges.live.binance_live_service import BinanceLiveService
-from trading_platform.core.test import data
-from trading_platform.core.test.util_methods import eq_ignore_certain_fields
 from trading_platform.exchanges.test.live.test_live_exchange_service import TestLiveExchangeService
 
 
 class TestBinanceLiveService(TestLiveExchangeService):
     __test__ = True
-    live_service_class = BinanceLiveService
-    xrp_tag_len = 9
 
-    def test_order_crud(self):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.live_service_class = BinanceLiveService
+        cls.xrp_tag_len = 9
+        cls.sleep_sec_consistency = 10
+
+        cls.exchange_order_id_for_filled_order = '51786981'
+        cls.pair_for_filled_order = Pair(base='BTC', quote='XRP')
+
+        cls.exchange_order_id_for_cancelled_order = '427755'
+        cls.pair_for_cancelled_order = Pair(base='BTC', quote='ZEN')
+
+        cls.fields_to_ignore = [
+            'exchange_order_id',
+            'order_status',
+            'app_create_timestamp',
+            'exchange_timestamp',
+        ]
+        cls.fields_to_ignore.extend(Order.financial_data_fields)
+
+    def test_fetch_cancelled_order(self):
         """
-        Should be able to place orders, fetch open orders, and cancel orders.
-
-        Assumes that the exchange has ETH and USDT balances, each balance > $30 which is the trading minimum.
-
-        There's no way to run this test with test orders, so create sell orders with very high prices and buy
-        orders with very low prices.
+        Fetch an order that's been filled. Responses should be as expected.
 
         Returns:
 
         """
-        self.service.fetch_latest_tickers()
-        quote_ticker = self.service.get_ticker(self.pair.name)
-        quote_sell_price = quote_ticker.ask * (one + FinancialData(.2))
-        quote_buy_price = quote_ticker.bid * (one - FinancialData(.2))
+        order: Order = self.service.fetch_order(exchange_order_id=self.exchange_order_id_for_cancelled_order,
+                                                pair=self.pair_for_cancelled_order)
+        check_required_fields(order)
+        eq_(order.exchange_id, self.live_service_class.exchange_id)
+        assert (order.exchange_order_id is not None)
+        eq_(order.order_status, OrderStatus.cancelled)
 
-        # Only Bittrex has a ETH balance, so no sell order is placed.
-        # TODO - place sell order
-        buy_amount = data.minimum_usdt_balance / quote_buy_price
+    def test_fetch_filled_order(self):
+        """
+        Fetch an order that's been filled. Responses should be as expected.
 
-        order: Order = Order(**{
-            'amount': buy_amount,
-            'price': quote_buy_price,
+        Returns:
 
-            'base': self.pair.base,
-            'quote': self.pair.quote,
+        """
+        order: Order = self.service.fetch_order(exchange_order_id=self.exchange_order_id_for_filled_order,
+                                                pair=self.pair_for_filled_order)
+        check_required_fields(order)
+        eq_(order.exchange_id, self.live_service_class.exchange_id)
+        assert (order.exchange_order_id is not None)
+        eq_(order.order_status, OrderStatus.filled)
 
-            'exchange_id': self.service.exchange_id,
-            'order_side': OrderSide.buy
-        })
-        buy_order = self.service.create_limit_buy_order(order=order)
+    def test_buy_order_crud(self):
+        self.validate_buy_order_crud(self.fields_to_ignore, decimal_comparison_precision=FinancialData.two_places)
 
-        try:
-            # unlike in the case of bittrex, the binance response populates these values. The response
-            # precision is to the 2nd decimal place.
-            precision = FinancialData.five_places if self.live_service_class.exchange_id == exchange_ids.bittrex else 2
-
-            # Buy order should have expected fields
-            check_required_fields(buy_order)
-            # exchange-related data
-            eq_(buy_order.exchange_id, self.service.exchange_id)
-
-            # numerical data
-            assert_almost_equal(buy_order.amount, buy_amount, places=precision)
-            assert_almost_equal(buy_order.filled, zero, places=precision)
-            assert_almost_equal(buy_order.price, quote_buy_price, places=precision)
-            assert_almost_equal(buy_order.remaining, buy_order.amount, places=precision)
-
-            # metadata
-            eq_(buy_order.order_type, OrderType.limit)
-            eq_(buy_order.order_status, OrderStatus.open)
-            eq_(buy_order.order_side, OrderSide.buy)
-            eq_(buy_order.base, self.pair.base)
-            eq_(buy_order.quote, self.pair.quote)
-
-            sleep(self.sleep_sec_consistency)
-
-            # Unlike Binance, Bittrex create limit order responses don't have the following fields
-            numerical_fields = ['amount', 'filled', 'price', 'remaining']
-            fields_to_ignore = ['app_create_timestamp',
-                                'exchange_timestamp'] + numerical_fields if self.live_service_class.exchange_id == exchange_ids.bittrex else [
-                'app_create_timestamp']
-
-            open_orders: Dict[str, Order] = self.service.fetch_open_orders(
-                Pair(base=self.pair.base, quote=self.pair.quote))
-            assert_true(len(open_orders) >= 1)
-
-            open_buy_order = self.service.get_order(buy_order.order_id)
-            check_required_fields(open_buy_order)
-            eq_ignore_certain_fields(open_buy_order, buy_order, fields_to_ignore=fields_to_ignore)
-
-            cancelled_buy_order = self.service.cancel_order(order=buy_order)
-            eq_(cancelled_buy_order.order_id, buy_order.order_id)
-            eq_(cancelled_buy_order.order_status, OrderStatus.cancelled)
-
-            sleep(self.sleep_sec_consistency)
-
-            open_orders: Dict[str, Order] = self.service.fetch_open_orders(
-                Pair(base=self.pair.base, quote=self.pair.quote))
-            eq_(len(open_orders), 0)
-
-            open_buy_order = self.service.get_order(buy_order.order_id)
-            assert (open_buy_order is None)
-        # clean up any placed orders even if there's an exception.
-        finally:
-            try:
-                self.service.cancel_order(order=buy_order)
-            # will throw an exception if order was already cancelled
-            except Exception:
-                pass
+    def test_sell_order_crud(self):
+        self.validate_sell_order_crud(self.fields_to_ignore, decimal_comparison_precision=FinancialData.two_places)

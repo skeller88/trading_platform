@@ -3,6 +3,7 @@ Interact with exchanges without logging in or running tests. Common operations i
 - Cancelling orders
 - Checking balances
 - Placing orders
+- Checking order status
 """
 
 from trading_platform.exchanges.data.enums import exchange_ids
@@ -13,7 +14,8 @@ from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.live import live_subclasses
 
-exchange_services_by_id = live_subclasses.instantiate(live_subclasses.mvp_live())
+exchange_services_by_id = live_subclasses.instantiate(live_subclasses.all_live())
+binance = exchange_services_by_id.get(exchange_ids.binance)
 bittrex = exchange_services_by_id.get(exchange_ids.bittrex)
 
 
@@ -46,7 +48,8 @@ def fetch_balances():
             print(currency, balance.free)
 
 
-pair = Pair(base='USDT', quote='BTC')
+# pair = Pair(base='USDT', quote='BTC')
+pair = Pair(base='BTC', quote='ZEN')
 
 order: Order = Order(**{
     # app metadata
@@ -66,13 +69,14 @@ order: Order = Order(**{
     'exchange_order_id': '3851846a-5e59-4475-a75b-dd2b29b18c65'
 })
 
-order = bittrex.cancel_order(order=order)
+# order = bittrex.cancel_order(order=order)
 # print(order.exchange_order_id)
 # exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7'
 # order = bittrex.fetch_order(exchange_order_id=exchange_order_id, pair=pair)
 
 # orders = bittrex.fetch_open_orders(pair=pair)
-# print(bittrex.fetch_closed_orders())
+orders = binance.fetch_orders(pair=pair)
+list(map(print, orders))
 
 # list(map(lambda x: print(x[0], x[1].exchange_order_id), orders.items()))
 # list(map(lambda x: print(x[0], x[1].free), bittrex.fetch_balances().items()))

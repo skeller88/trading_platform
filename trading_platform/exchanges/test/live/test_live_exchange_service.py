@@ -1,5 +1,5 @@
 """
-Test exchange live functionality.
+Test exchange live functionality. These tests depend on the exchange having a nonzero USDT and BTC balance.
 
 Exchanges won't allow for multiple accounts per exchange. So, the same exchange has to be used for trading
 and testing. This creates some trickiness, for example, when asserting the number of open orders is as expected,
@@ -10,7 +10,7 @@ from time import sleep
 from typing import Dict, Callable, List, Optional
 
 import pandas
-from nose.tools import eq_, assert_true, assert_greater, nottest, assert_almost_equal
+from nose.tools import eq_, assert_true, assert_greater, assert_almost_equals
 
 from trading_platform.core.test.data import Defaults
 from trading_platform.core.test.util_methods import disable_debug_logging, eq_ignore_certain_fields
@@ -25,34 +25,36 @@ from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.utils import check_required_fields
 from trading_platform.exchanges.live.kucoin_live_service import KucoinLiveService
 from trading_platform.exchanges.live.live_subclasses import exchange_service_credentials_for_exchange, \
-    exchange_credentials_param
+    exchange_credentials_param, get_all_live_exchange_service_credentials
 from trading_platform.storage.daos.balance_dao import BalanceDao
 from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
 
 
 class TestLiveExchangeService(unittest.TestCase):
     __test__ = False  # important, makes sure tests are not run on base class
-    # Each inheritor of this class will set these values
-    live_service_class = None
-    xrp_tag_len = None
-    # Bittrex in particular has slow consistency and takes a second or more for changes to be persisted.
-    sleep_sec_consistency = 4
 
     # Uncomment this line and one of the live_service_class definition lines to run a specific test of a specific
     # exchange
-    __test__ = True
-    live_service_class = KucoinLiveService
+    # __test__ = True
+    # live_service_class = KucoinLiveService
+
     # live_service_class = BittrexLiveService
 
     @classmethod
     def setUpClass(cls):
+        # Each inheritor of this class will set these values
+        cls.live_service_class = None
+        cls.xrp_tag_len = None
+        # Bittrex in particular has slow consistency and takes a second or more for changes to be persisted.
+        cls.sleep_sec_consistency = 4
+
         disable_debug_logging()
         cls.pair = Pair(base='USDT', quote='BTC')
         cls.engine = SqlAlchemyEngine.local_engine_maker()
         cls.engine.initialize_tables()
         cls.session = cls.engine.scoped_session_maker()
         cls.balance_dao = BalanceDao()
-        cls.credentials = exchange_service_credentials_for_exchange(cls.live_service_class, param_name=exchange_credentials_param)
+        cls.credentials = get_all_live_exchange_service_credentials('exchange_credentials')
         cls.withdrawal_fees = pandas.DataFrame(
             {'currency': cls.pair.base, 'withdrawal_fee': Defaults.base_withdrawal_fee},
             {'currency': cls.pair.quote, 'withdrawal_fee': Defaults.quote_withdrawal_fee}
@@ -65,8 +67,10 @@ class TestLiveExchangeService(unittest.TestCase):
 
         """
         sleep(5)
-        self.service = self.live_service_class(self.credentials.get('key'), self.credentials.get('secret'),
-                                             withdrawal_fees=self.withdrawal_fees)
+        credentials_for_exchange: Dict[str, str] = self.credentials.get(self.live_service_class.exchange_id)
+        self.service = self.live_service_class(credentials_for_exchange.get('key'),
+                                               credentials_for_exchange.get('secret'),
+                                               withdrawal_fees=self.withdrawal_fees)
 
     def tearDown(self):
         self.balance_dao.delete_all(session=self.session)
@@ -126,7 +130,7 @@ class TestLiveExchangeService(unittest.TestCase):
         else:
             assert_greater(len(markets), 200)
 
-    def validate_buy_order_crud(self, fields_to_ignore):
+    def validate_buy_order_crud(self, fields_to_ignore, decimal_comparison_precision: Optional[int]):
         """
          Should be able to place orders, fetch open orders, and cancel orders.
 
@@ -155,9 +159,10 @@ class TestLiveExchangeService(unittest.TestCase):
             'filled': zero,
         }
 
-        self.validate_order_crud(buy_order_kwargs, fields_to_ignore=fields_to_ignore)
+        self.validate_order_crud(buy_order_kwargs, fields_to_ignore=fields_to_ignore,
+                                 decimal_comparison_precision=decimal_comparison_precision)
 
-    def validate_sell_order_crud(self, fields_to_ignore: List[str]):
+    def validate_sell_order_crud(self, fields_to_ignore: List[str], decimal_comparison_precision: Optional[int]):
         """
          Should be able to place orders, fetch open orders, and cancel orders.
 
@@ -186,9 +191,11 @@ class TestLiveExchangeService(unittest.TestCase):
             'filled': zero,
         }
 
-        self.validate_order_crud(sell_order_kwargs, fields_to_ignore=fields_to_ignore)
+        self.validate_order_crud(sell_order_kwargs, fields_to_ignore=fields_to_ignore,
+                                 decimal_comparison_precision=decimal_comparison_precision)
 
-    def validate_order_crud(self, order_kwargs, fields_to_ignore: List[str]):
+    def validate_order_crud(self, order_kwargs, fields_to_ignore: List[str],
+                            decimal_comparison_precision: Optional[int]):
         """
           Should be able to place orders, fetch open orders, and cancel orders.
 
@@ -208,7 +215,7 @@ class TestLiveExchangeService(unittest.TestCase):
 
             'exchange_id': self.service.exchange_id,
             'order_status': OrderStatus.pending,
-            'order_type': OrderType.limit
+            'order_type': OrderType.limit,
         }
 
         base_order_kwargs.update(order_kwargs)
@@ -218,6 +225,11 @@ class TestLiveExchangeService(unittest.TestCase):
 
         # compare order with open_order
         eq_ignore_certain_fields(order, open_order, fields_to_ignore=fields_to_ignore)
+
+        if decimal_comparison_precision is not None:
+            for field in Order.financial_data_fields:
+                assert_almost_equals(getattr(order, field), getattr(open_order, field),
+                                     places=decimal_comparison_precision)
 
         # same fields for pending buy and sell orders
         check_required_fields(order)
@@ -244,8 +256,19 @@ class TestLiveExchangeService(unittest.TestCase):
 
         open_orders: Dict[str, Order] = self.service.fetch_open_orders(
             Pair(base=self.pair.base, quote=self.pair.quote))
+        # order - '0_BTC_USDT_0_5105.60800_0.02766'
+        # open_order - '0_BTC_USDT_0_5105.61000_0.02766'
+
+        # test suite
+        # order - '0_BTC_USDT_0_5089.136_0.028'
+        # open_order - '0_BTC_USDT_0_5089.140_0.028'
+
+        # single test
+        # order - '0_BTC_USDT_0_5079.08000_0.02781'
+        # open_order - '0_BTC_USDT_0_5079.08000_0.02781'
         assert_true(len(open_orders) == 1)
 
+        # '0_BTC_USDT_0_5096_00000_0_02771'
         open_order = self.service.get_order(order.order_id)
         check_required_fields(open_order)
 
@@ -253,7 +276,12 @@ class TestLiveExchangeService(unittest.TestCase):
         # exchange data returned by the fetch_open_orders call.
         fields_to_ignore.append('exchange_timestamp')
         eq_ignore_certain_fields(open_order, order, fields_to_ignore=fields_to_ignore)
-        assert(open_order.exchange_timestamp is not None)
+        assert (open_order.exchange_timestamp is not None)
+
+        if decimal_comparison_precision is not None:
+            for field in Order.financial_data_fields:
+                assert_almost_equals(getattr(order, field), getattr(open_order, field),
+                                     places=decimal_comparison_precision)
 
         cancelled_buy_order = self.service.cancel_order(order=open_order)
         eq_(cancelled_buy_order.order_id, open_order.order_id)

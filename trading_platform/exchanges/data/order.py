@@ -201,13 +201,14 @@ class Order:
         else:
             # Exchanges sometimes return floats, meaning that the value of the order "price" and "amount" fields will
             # differ between the exchange (float type) and the app (FinancialData type). That means if the app needs
-            # to fetch open orders, the order_id won't match up.
+            # to fetch open orders, the "order_id" won't match up. So that the app order and exchange order "order_id"
+            # field matches, round the numerical field values when they are used to construct the id field.
             def field_id_format(field):
                 field_value = getattr(self, field)
                 return str(field_value) if field not in self.financial_data_index_fields else str(
                     round(field_value, FinancialData.five_places))
 
-            self.order_id = '_'.join(map(field_id_format, self.index_fields))
+            self.order_id = '_'.join(map(field_id_format, self.index_fields)).replace('.', '_')
 
     # https://stackoverflow.com/questions/390250/elegant-ways-to-support-equivalence-equality-in-python-classes
     def __eq__(self, other):
@@ -275,9 +276,11 @@ class Order:
         Construct an open order instance that's a copy of the current instance, but with certain fields
         overwritten by the values in order_data from a create_limit_*_order exchange response.
 
-        The most important fields that are overwritten are:
+        The fields that are overwritten are:
         - exchange_order_id
         - exchange_timestamp
+        - app_create_timestamp
+        - order_status
 
         This method exists because the data returned from an exchange
         for a given Order may:
@@ -375,6 +378,8 @@ class Order:
         if order_data.get('timestamp'):
             kwargs['exchange_timestamp'] = microsecond_timestamp_to_second_timestamp(order_data.get('timestamp'))
 
+        if exchange_id == exchange_ids.binance and order_data.get('info') and order_data.get('info').get('clientOrderId'):
+            kwargs['order_id'] = order_data['info']['clientOrderId']
         return cls(**kwargs)
 
     @classmethod

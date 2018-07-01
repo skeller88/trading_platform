@@ -25,10 +25,19 @@ from trading_platform.exchanges.test.live.test_live_exchange_service import Test
 
 class TestBittrexLiveService(TestLiveExchangeService):
     __test__ = True
-    live_service_class = BittrexLiveService
-    xrp_tag_len = 10
-    exchange_order_id_for_filled_order = '54ee8a42-0354-423e-9d23-8226c4a8e9c7'
-    exchange_order_id_for_cancelled_order = '309ab197-83e9-49e0-90ac-7c9942ec010b'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.live_service_class = BittrexLiveService
+        cls.xrp_tag_len = 10
+        cls.exchange_order_id_for_filled_order = '54ee8a42-0354-423e-9d23-8226c4a8e9c7'
+        cls.exchange_order_id_for_cancelled_order = '309ab197-83e9-49e0-90ac-7c9942ec010b'
+
+        cls.fields_to_ignore = [
+            'exchange_order_id',
+            'order_status',
+            'app_create_timestamp',
+        ]
 
     def test_fetch_cancelled_order(self):
         """
@@ -56,27 +65,19 @@ class TestBittrexLiveService(TestLiveExchangeService):
         assert (order.exchange_order_id is not None)
         eq_(order.order_status, OrderStatus.filled)
 
-    def test_cancel_filled_order(self):
-        order_to_cancel: Order = Order(**{
-            'base': self.pair.base,
-            'quote': self.pair.quote,
-
-            'exchange_id': self.service.exchange_id,
-            'exchange_order_id': self.exchange_order_id_for_filled_order,
-        })
-
-        order_cancelled: Order = self.service.cancel_order(order=order_to_cancel)
+    # def test_cancel_filled_order(self):
+    #     order_to_cancel: Order = Order(**{
+    #         'base': self.pair.base,
+    #         'quote': self.pair.quote,
+    #
+    #         'exchange_id': self.service.exchange_id,
+    #         'exchange_order_id': self.exchange_order_id_for_filled_order,
+    #     })
+    #
+    #     order_cancelled: Order = self.service.cancel_order(order=order_to_cancel)
 
     def test_buy_order_crud(self):
-        self.validate_buy_order_crud([
-            'exchange_order_id',
-            'order_status',
-            'app_create_timestamp',
-        ])
+        self.validate_buy_order_crud(self.fields_to_ignore, None)
 
     def test_sell_order_crud(self):
-        self.validate_sell_order_crud([
-            'exchange_order_id',
-            'order_status',
-            'app_create_timestamp',
-        ])
+        self.validate_sell_order_crud(self.fields_to_ignore, None)

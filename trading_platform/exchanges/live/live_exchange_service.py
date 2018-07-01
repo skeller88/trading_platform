@@ -77,6 +77,7 @@ class LiveExchangeService(ExchangeServiceAbc):
     def create_limit_buy_order(self, order, params={}) -> Optional[Order]:
         if order.order_side != OrderSide.buy:
             raise Exception('OrderSide != OrderSide.buy')
+
         return self.create_limit_order(order, **params)
 
     def create_limit_sell_order(self, order, params={}) -> Optional[Order]:
@@ -93,6 +94,14 @@ class LiveExchangeService(ExchangeServiceAbc):
             amount = order.amount
             price = order.price
 
+        # Some exchanges allow that id to be sent with a create order request, and it's
+        # useful for recording the id of an order in the app database before attempting an order. Then if the app
+        # fails and restarts, it can look up the state of an order on the exchange with the client_order_id.
+        # In order for this record keeping method to work, Order#from_fetch_order_exchange_response sets "order_id"
+        # to the "clientOrderId" property of the exchange response.
+        if self.exchange_id == exchange_ids.binance:
+            params['newClientOrderId'] = order.order_id
+
         pair: Pair = Pair(base=order.base, quote=order.quote)
 
         limit_order_method = self.__client.create_limit_buy_order if order.order_side == OrderSide.buy else self.__client.create_limit_sell_order
@@ -105,8 +114,8 @@ class LiveExchangeService(ExchangeServiceAbc):
         order_copy: Order = order.copy_updated_with_create_order_exchange_response(response)
         return order_copy
 
-    def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
-        return self.__client.fetch_closed_orders(symbol, since, limit, params)
+    def fetch_closed_orders(self, pair=None, since=None, limit=None, params={}) -> Dict[str, Order]:
+        return self.__client.fetch_closed_orders(pair.name_for_exchange_clients, since, limit, params)
 
     def fetch_order(self, exchange_order_id=None, pair=None) -> Optional[Order]:
         if pair is None:
@@ -147,7 +156,7 @@ class LiveExchangeService(ExchangeServiceAbc):
             order_data_list = make_api_request(self.__client.fetch_open_orders, pair.name_for_exchange_clients)
         except ccxt.OrderNotFound:
             order_data_list = None
-
+        # price - 5081.0600000
         if order_data_list is None:
             return self.__orders
 

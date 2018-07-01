@@ -13,6 +13,7 @@ class FinancialData:
     # Precision is the total number of digits, scale is the number of digits after the decimal point
     # For tests, the test result is not as precise, usually due to the fact that pandas don't have a decimal datatype.
     # These tests don't have as much precision as "decimal_scale".
+    one_place = 1
     two_places = 2
     three_places = 3
     four_places = 4
@@ -25,7 +26,7 @@ class FinancialData:
             # Bittrex and Kucoin precision for order numerical data is six places. In order to match an order_id in the
             # database with the metadata of an order returned from the exchange, the app needs to round numerical fields to the
             # sixth place as well.
-            converted = round(Decimal(number), cls.six_places)
+            converted = round(Decimal(number), cls.five_places)
             return converted
         except Exception as ex:
             # This exception occurs so often, swallow it
