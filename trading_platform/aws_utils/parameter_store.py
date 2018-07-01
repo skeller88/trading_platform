@@ -1,4 +1,6 @@
 import json
+import os
+from typing import Dict
 
 import boto3
 
@@ -19,7 +21,7 @@ def get_parameters(param_names):
     return {parameter['Name']: parameter['Value'] for parameter in response['Parameters']}
 
 
-def get_parameter(param_name):
+def get_parameter(param_name) -> Dict[str, str]:
     """
     This function reads a secure parameter from AWS' SSM service.
     The request must be passed a valid parameter name, as well as
@@ -33,3 +35,9 @@ def get_parameter(param_name):
         WithDecryption=True
     )
     return json.loads(response['Parameter']['Value'])
+
+
+def load_properties_from_parameter_store_and_set(param_name):
+    response: Dict[str, str] = get_parameter(param_name)
+    for name, value in response.items():
+        os.environ[name] = value
