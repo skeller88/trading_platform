@@ -28,10 +28,12 @@ class TestBittrexLiveService(TestLiveExchangeService):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         cls.live_service_class = BittrexLiveService
         cls.xrp_tag_len = 10
-        cls.exchange_order_id_for_filled_order = '54ee8a42-0354-423e-9d23-8226c4a8e9c7'
+        cls.exchange_order_id_for_cancelled_and_filled_order = '54ee8a42-0354-423e-9d23-8226c4a8e9c7'
         cls.exchange_order_id_for_cancelled_order = '309ab197-83e9-49e0-90ac-7c9942ec010b'
+        cls.exchange_order_id_for_filled_order = 'c37bdee8-7640-4784-a7ab-2732b9217ee0'
 
         cls.fields_to_ignore = [
             'exchange_order_id',
@@ -51,6 +53,20 @@ class TestBittrexLiveService(TestLiveExchangeService):
         eq_(order.exchange_id, self.live_service_class.exchange_id)
         assert (order.exchange_order_id is not None)
         eq_(order.order_status, OrderStatus.cancelled)
+
+    def test_fetch_cancelled_and_partially_filled_order(self):
+        """
+        Fetch an order that's been cancelled and partially filled. Responses should be as expected. This particular
+        Bittrex order seems like an edge case because it's completely filled, yet its status is "cancelled".
+
+        Returns:
+
+        """
+        order: Order = self.service.fetch_order(exchange_order_id=self.exchange_order_id_for_cancelled_and_filled_order)
+        check_required_fields(order)
+        eq_(order.exchange_id, self.live_service_class.exchange_id)
+        assert (order.exchange_order_id is not None)
+        eq_(order.order_status, OrderStatus.cancelled_and_partially_filled)
 
     def test_fetch_filled_order(self):
         """

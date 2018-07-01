@@ -54,12 +54,12 @@ class OrderStatus:
         if order_status == 'closed':
             return OrderStatus.filled
 
-        partially_filled = FinancialData(exchange_data.get('filled')) > zero
+        is_partially_filled: bool = FinancialData(exchange_data.get('filled')) > zero
 
         if order_status == 'canceled':
-            return OrderStatus.cancelled_and_partially_filled if partially_filled else OrderStatus.cancelled
+            return OrderStatus.cancelled_and_partially_filled if is_partially_filled else OrderStatus.cancelled
 
         if order_status == cls.statuses_to_names.get(OrderStatus.open):
-            return OrderStatus.partially_filled if partially_filled else OrderStatus.open
+            return OrderStatus.partially_filled if is_partially_filled else OrderStatus.open
 
         raise Exception('No OrderStatus found for order_status {0}'.format(order_status))

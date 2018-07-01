@@ -48,8 +48,8 @@ def fetch_balances():
             print(currency, balance.free)
 
 
-# pair = Pair(base='USDT', quote='BTC')
-pair = Pair(base='BTC', quote='ZEN')
+pair = Pair(base='USDT', quote='BTC')
+# pair = Pair(base='BTC', quote='ZEN')
 
 order: Order = Order(**{
     # app metadata
@@ -58,25 +58,25 @@ order: Order = Order(**{
     # exchange-related metadata
     'exchange_id': exchange_ids.bittrex,
     'order_type': OrderType.limit,
-    'order_side': OrderSide.buy,
+    'order_side': OrderSide.sell,
 
     # order metadata
     'base': pair.base,
     'quote': pair.quote,
 
-    'amount': FinancialData(0.01),
-    'price': FinancialData(9000),
-    'exchange_order_id': '3851846a-5e59-4475-a75b-dd2b29b18c65'
+    'amount': FinancialData(0.005),
+    'price': FinancialData(6200),
 })
+
+# order_resp = bittrex.create_limit_sell_order(order)
+# print(order_resp.__dict__)
 
 # order = bittrex.cancel_order(order=order)
 # print(order.exchange_order_id)
 # exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7'
-# order = bittrex.fetch_order(exchange_order_id=exchange_order_id, pair=pair)
-
+# order = bittrex.fetch_order(exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7', pair=pair)
+# print(order.__dict__)
 # orders = bittrex.fetch_open_orders(pair=pair)
-orders = binance.fetch_orders(pair=pair)
-list(map(print, orders))
 
 # list(map(lambda x: print(x[0], x[1].exchange_order_id), orders.items()))
 # list(map(lambda x: print(x[0], x[1].free), bittrex.fetch_balances().items()))
