@@ -18,7 +18,8 @@ class Database:
     @classmethod
     def set_properties_from_env_variables(cls):
         """
-        Call this method after environment variables have been set.
+        Sometimes the environment variables that this class inspects have not been set when this class is evaluated.
+        In those situations, call this method after environment variables have been set.
 
         Returns:
 

@@ -1,7 +1,5 @@
 import os
 
-from trading_platform.aws_utils.parameter_store import get_parameter
-
 
 class TwitterProperties:
     consumer_key = None
@@ -23,10 +21,3 @@ class TwitterProperties:
         # Create an access token under the the "Your access token" section
         cls.access_token = os.environ.get('ACCESS_TOKEN')
         cls.access_token_secret = os.environ.get('ACCESS_TOKEN_SECRET')
-
-    @classmethod
-    def load_properties_from_parameter_store_and_set(cls):
-        twitter_credentials = get_parameter('twitter_credentials')
-        for name, value in twitter_credentials.items():
-            os.environ[name] = value
-        cls.set_properties_from_env_variables()
