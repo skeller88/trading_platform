@@ -12,6 +12,7 @@ import warnings
 
 from sqlalchemy import create_engine, event, exc
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
+from sqlalchemy.pool import NullPool
 
 from trading_platform.properties.env_properties import EnvProperties, DatabaseProperties
 from trading_platform.storage.sql_alchemy_dtos import table_classes
@@ -51,12 +52,12 @@ class SqlAlchemyEngine:
         })
         self.debug = EnvProperties.debug
         print_if_debug_enabled(self.debug, 'connecting to database at {0} on port {1}'.format(host, port))
-        self.sql_alchemy_engine = create_engine(self.connection_string, echo=debug, pool_pre_ping=True, **kwargs)
-        # sqlalchemy's API is confusingly named. Call session_maker_instance to create a Session instance. Then Session
-        # is called to create thread-local session instances.
+        self.sql_alchemy_engine = create_engine(self.connection_string, echo=debug, poolclass=NullPool, **kwargs)
+        # sqlalchemy's API is confusingly named. session_factory creates Session instances.
         # http://docs.sqlalchemy.org/en/latest/orm/session_api.html#sqlalchemy.orm.session.Session
-        session_maker_instance: Session = sessionmaker(bind=self.sql_alchemy_engine, autocommit=False, autoflush=False)
-        self.scoped_session_maker = scoped_session(session_maker_instance)
+        session_maker: sessionmaker = sessionmaker(bind=self.sql_alchemy_engine, autocommit=False, autoflush=False)
+        # scoped_session_maker creates thread-local session instances.
+        self.scoped_session_maker: scoped_session = scoped_session(session_maker)
         self.base = Base
 
     def dispose(self):
@@ -83,32 +84,23 @@ class SqlAlchemyEngine:
         table_classes.exchange_data_tables()
         return self.base.metadata.create_all(self.sql_alchemy_engine)
 
-    @classmethod
-    def rds_engine(cls, **kwargs):
-        return cls(dialect='postgres', driver='pg8000', username=DatabaseProperties.prod_db_username,
-                   password=DatabaseProperties.prod_db_password, host=DatabaseProperties.rds_host, port=5432, database='market_data',
-                   **kwargs)
-
-    @classmethod
-    def local_engine_maker(cls, **kwargs):
-        return cls(dialect='postgres', driver='pg8000', username='limiteduser',
-                   password=DatabaseProperties.local_db_password, host='localhost', port=5432,
-                   database='market_data', **kwargs)
-
-    @staticmethod
-    def add_engine_pidguard(engine):
-        """Add multiprocessing guards.
+    def add_engine_pidguard(self):
+        """
+        Add multiprocessing guards.
 
         Forces a connection to be reconnected if it is detected
         as having been shared to a sub-process.
 
+        Taken from SQLAlchemy docs:
+        http://docs.sqlalchemy.org/en/rel_1_0/faq/connections.html#how-do-i-use-engines-connections-sessions-with-python-multiprocessing-or-os-fork
+
         """
 
-        @event.listens_for(engine, "connect")
+        @event.listens_for(self.sql_alchemy_engine, "connect")
         def connect(dbapi_connection, connection_record):
             connection_record.info['pid'] = os.getpid()
 
-        @event.listens_for(engine, "checkout")
+        @event.listens_for(self.sql_alchemy_engine, "checkout")
         def checkout(dbapi_connection, connection_record, connection_proxy):
             pid = os.getpid()
             if connection_record.info['pid'] != pid:
@@ -124,3 +116,15 @@ class SqlAlchemyEngine:
                     "attempting to check out in pid %s" %
                     (connection_record.info['pid'], pid)
                 )
+
+    @classmethod
+    def rds_engine(cls, **kwargs):
+        return cls(dialect='postgres', driver='pg8000', username=DatabaseProperties.prod_db_username,
+                   password=DatabaseProperties.prod_db_password, host=DatabaseProperties.rds_host, port=5432, database='market_data',
+                   **kwargs)
+
+    @classmethod
+    def local_engine_maker(cls, **kwargs):
+        return cls(dialect='postgres', driver='pg8000', username='limiteduser',
+                   password=DatabaseProperties.local_db_password, host='localhost', port=5432,
+                   database='market_data', **kwargs)

@@ -3,7 +3,7 @@ from logging import Logger
 from time import sleep
 from typing import Dict, Set, Iterable
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, scoped_session
 
 from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
@@ -20,15 +20,16 @@ class OrderExecutionService:
         self.order_dao: OrderDao = kwargs.get('order_dao')
         self.multithreaded: bool = kwargs.get('multithreaded')
         self.num_order_status_checks = kwargs.get('num_order_status_checks', 3)
+        self.scoped_session_maker: scoped_session = kwargs.get('scoped_session_maker')
         self.sleep_time_sec_between_order_checks = kwargs.get('sleep_time_sec_between_order_checks', 4)
 
         if self.multithreaded:
             self.thread_pool_executer: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=10)
 
-    def execute_order_set(self, orders: Set[Order], session: Session, write_pending_order: bool,
+    def execute_order_set(self, orders: Set[Order], write_pending_order: bool,
                           check_if_orders_filled: bool) -> Dict[str, Order]:
         def execute_order_with_session(order) -> Order:
-            return self.execute_order(order, session, write_pending_order, check_if_order_filled=check_if_orders_filled)
+            return self.execute_order(order, self.scoped_session_maker(), write_pending_order, check_if_order_filled=check_if_orders_filled)
 
         order_execution_attempts: Iterable[Order] = map(execute_order_with_session, orders)
         executed_orders: Iterable[Order] = filter(lambda order: order is not None, order_execution_attempts)

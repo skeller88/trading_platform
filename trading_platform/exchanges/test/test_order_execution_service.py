@@ -7,6 +7,8 @@ from typing import Dict, Set, List
 from unittest.mock import MagicMock
 
 from nose.tools import eq_, assert_greater, nottest
+from sqlalchemy.orm import Session
+
 from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
 
 from trading_platform.core.services.logging_service import LoggingService
@@ -30,7 +32,7 @@ class TestOrderExecutionService(unittest.TestCase):
     def setUpClass(cls):
         cls.engine = SqlAlchemyEngine.local_engine_maker()
         cls.engine.initialize_tables()
-        cls.session = cls.engine.scoped_session_maker()
+        cls.scoped_session_maker = cls.engine.scoped_session_maker
         cls.order_dao = OrderDao()
         cls.logger: Logger = LoggingService.set_logger()
 
@@ -65,19 +67,22 @@ class TestOrderExecutionService(unittest.TestCase):
         self.backtest_services: Dict[id, BacktestExchangeService] = backtest_subclasses.instantiate()
         self.bittrex = self.backtest_services[exchange_ids.bittrex]
 
+        self.session: Session = self.scoped_session_maker()
         self.order_execution_service: OrderExecutionService = OrderExecutionService(**{
             'logger': self.logger,
             'exchanges_by_id': self.backtest_services,
             'order_dao': self.order_dao,
             'multithreaded': False,
             'num_order_status_checks': 1,
+            'scoped_session_maker': self.scoped_session_maker,
             'sleep_time_sec_between_order_checks': 0
         })
 
     def tearDown(self):
-        self.order_dao.delete_all(session=self.session)
-        self.session.commit()
-        self.session.close_all()
+        session: Session = self.scoped_session_maker()
+        self.order_dao.delete_all(session=session)
+        session.commit()
+        session.close_all()
 
     @classmethod
     def tearDownClass(cls):
@@ -238,9 +243,6 @@ class TestOrderExecutionService(unittest.TestCase):
         self.test_execute_order(self.sell_order_instance(), order_status_on_exchange=OrderStatus.open,
                                 check_if_order_filled=True, write_pending_order=True)
 
-    @unittest.skip('This test fails because the session gets closed unexpectedly. Figure out why.')
-    # I would expect this test to pass because I'm using scoped sessions.
-    # https://stackoverflow.com/questions/6297404/multi-threaded-use-of-sqlalchemy
     def test_execute_orders_multithreaded(self):
         self.test_execute_orders(True)
 
@@ -262,6 +264,7 @@ class TestOrderExecutionService(unittest.TestCase):
         # instantiated. So don't use the self.order_execution_service defined in setup() because it won't
         # have the executor.
         self.order_execution_service: OrderExecutionService = OrderExecutionService(
+            scoped_session_maker=self.scoped_session_maker,
             logger=self.logger, order_dao=self.order_dao, exchanges_by_id=self.backtest_services,
             multithreaded=multithreaded)
 
@@ -282,7 +285,7 @@ class TestOrderExecutionService(unittest.TestCase):
         sell_order: Order = Order(**sell_order_kwargs)
 
         order_set: Set[Order] = {buy_order, sell_order}
-        executed_orders: Dict[str, Order] = self.order_execution_service.execute_order_set(order_set, self.session,
+        executed_orders: Dict[str, Order] = self.order_execution_service.execute_order_set(order_set,
                                                                                            write_pending_order=True,
                                                                                            check_if_orders_filled=True)
         eq_(len(executed_orders.values()), len(order_set))
