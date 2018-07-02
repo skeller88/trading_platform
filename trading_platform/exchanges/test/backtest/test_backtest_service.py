@@ -15,6 +15,7 @@ from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.financial_data import one, two, FinancialData, zero
 from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
+from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.utils.exceptions import InsufficientFundsException
 
 
@@ -291,3 +292,15 @@ class TestBacktestExchangeService(unittest.TestCase):
         eq_(self.te.get_balance(self.quote).total, zero)
         eq_(dest_exchange.get_balance(self.quote).total, prev_balance + quote_withdrawn)
         eq_(quote_withdrawn, self.initial_quote_capital - self.te.withdrawal_fee_for_currency(self.quote))
+
+    ###########################################
+    # Market state
+    ###########################################
+
+    def test_set_ticker(self):
+        assert(self.te.get_ticker(self.pair.name) is None)
+
+        ticker: Ticker = Ticker(bid=FinancialData(5))
+        self.te.set_ticker(self.pair.name, ticker)
+
+        eq_(self.te.get_ticker(self.pair.name), ticker)

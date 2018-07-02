@@ -89,7 +89,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
         # Keep track of orders that have been placed, and manipulate their state to simulate different outcomes
         # of create_limit_*_order calls.
         self.orders = {}
-        self.tickers = {}
+        self.__tickers = {}
 
         self.echo = echo
 
@@ -451,16 +451,19 @@ class BacktestExchangeService(ExchangeServiceAbc):
         Unlike LiveExchangeService, doesn't return latest tickers.
         :return list Ticker:
         """
-        return list(self.tickers.values())
+        return list(self.__tickers.values())
 
     def set_tickers(self, tickers):
-        self.tickers = tickers
+        self.__tickers = tickers
+
+    def set_ticker(self, pair_name: str, ticker: Ticker):
+        self.__tickers[pair_name] = ticker
 
     def get_ticker(self, pair_name: str) -> Optional[Ticker]:
-        return self.tickers.get(pair_name)
+        return self.__tickers.get(pair_name)
 
     def get_tickers(self) -> Dict[str, Ticker]:
-        return self.tickers
+        return self.__tickers
 
     def fetch_order_book(self, symbol, limit=None, params={}):
         raise NotImplementedError
