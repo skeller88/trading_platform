@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tradingplatform",
-    version="0.1.0",
+    version="0.1.1",
     author="skeller88",
     author_email="skeller88@gmail.com",
     description="A trading system platform",
