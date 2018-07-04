@@ -1,6 +1,8 @@
 import pandas
 
 binance_withdrawal_fees_df = pandas.DataFrame(data=[
+    {'currency': 'NXS', 'withdrawal_fee': 		0.02},
+    {'currency': 'TUSD', 'withdrawal_fee': 	2.69},
     {'currency': 'ADA', 'withdrawal_fee': 1.000000000000000},
     {'currency': 'ADX', 'withdrawal_fee': 4.100000000000000},
     {'currency': 'AE', 'withdrawal_fee': 1.400000000000000},
@@ -137,6 +139,7 @@ binance_withdrawal_fees_df = pandas.DataFrame(data=[
 binance_withdrawal_fees_df.set_index(keys='currency', inplace=True)
 
 bittrex_withdrawal_fees_df = pandas.DataFrame(data=[
+{'currency': 'GTO', 'withdrawal_fee': 	19.0},
     {'currency': '1ST', 'withdrawal_fee': 4.500000000000000},
     {'currency': '2GIVE', 'withdrawal_fee': 0.010000000000000},
     {'currency': '8BIT', 'withdrawal_fee': 0.002000000000000},

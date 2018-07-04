@@ -203,10 +203,14 @@ class Order:
             # differ between the exchange (float type) and the app (FinancialData type). That means if the app needs
             # to fetch open orders, the "order_id" won't match up. So that the app order and exchange order "order_id"
             # field matches, round the numerical field values when they are used to construct the id field.
+
+            # Bittrex and Kucoin precision for order numerical data is six places. In order to match an order_id in the
+            # database with the metadata of an order returned from the exchange, the app needs to round numerical fields to the
+            # sixth place as well.
             def field_id_format(field):
                 field_value = getattr(self, field)
                 return str(field_value) if field not in self.financial_data_index_fields else str(
-                    round(field_value, FinancialData.five_places))
+                    round(field_value, FinancialData.six_places))
 
             self.order_id = '_'.join(map(field_id_format, self.index_fields)).replace('.', '_')
 

@@ -4,10 +4,10 @@ from typing import List
 
 import pandas
 
+from trading_platform.aws_utils.s3_operations import write_tickers
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.properties import env_properties
-from trading_platform.storage.s3_operations import write_tickers
 from trading_platform.utils.logging import print_if_debug_enabled
 
 

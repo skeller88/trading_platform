@@ -19,14 +19,17 @@ class FinancialData:
     four_places = 4
     five_places = 5
     six_places = 6
+    seven_places = 7
     eight_places = 8
+
+    # Certain exchange integrations expect floats and a certain amount of precision
+    # See https://github.com/ccxt/ccxt/wiki/Manual#precision-and-limits
+    # TODO - make precision a property of an ExchangeAbcService.
+    order_numerical_field_precision = 7
 
     def __new__(cls, number):
         try:
-            # Bittrex and Kucoin precision for order numerical data is six places. In order to match an order_id in the
-            # database with the metadata of an order returned from the exchange, the app needs to round numerical fields to the
-            # sixth place as well.
-            converted = round(Decimal(number), cls.five_places)
+            converted = Decimal(number)
             return converted
         except Exception as ex:
             # This exception occurs so often, swallow it

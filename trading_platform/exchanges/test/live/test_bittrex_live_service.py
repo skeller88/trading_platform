@@ -40,6 +40,7 @@ class TestBittrexLiveService(TestLiveExchangeService):
             'order_status',
             'app_create_timestamp',
         ]
+        cls.fields_to_ignore.extend(Order.financial_data_fields)
 
     def test_fetch_cancelled_order(self):
         """
@@ -93,7 +94,9 @@ class TestBittrexLiveService(TestLiveExchangeService):
     #     order_cancelled: Order = self.service.cancel_order(order=order_to_cancel)
 
     def test_buy_order_crud(self):
-        self.validate_buy_order_crud(self.fields_to_ignore, None)
+        self.validate_buy_order_crud(self.fields_to_ignore,
+                                     decimal_comparison_precision=FinancialData.order_numerical_field_precision)
 
     def test_sell_order_crud(self):
-        self.validate_sell_order_crud(self.fields_to_ignore, None)
+        self.validate_sell_order_crud(self.fields_to_ignore,
+                                      decimal_comparison_precision=FinancialData.order_numerical_field_precision)

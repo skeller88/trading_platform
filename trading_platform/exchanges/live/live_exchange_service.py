@@ -1,7 +1,7 @@
 from typing import Dict, Optional, List
 
 import ccxt
-from ccxt import ExchangeError, InvalidOrder
+from ccxt import ExchangeError, InvalidOrder, InvalidAddress
 
 from trading_platform.core.constants import exchange_pairs
 from trading_platform.exchanges.data import standardizers
@@ -36,7 +36,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         self.exchange_name = exchange_name
         self.__client = client
         self.__balances = {}
-        self.__orders= {}
+        self.__orders = {}
         self.__tickers = {}
         self.__withdrawal_fees = withdrawal_fees
 
@@ -62,7 +62,8 @@ class LiveExchangeService(ExchangeServiceAbc):
 
         pair: Pair = Pair(base=order.base, quote=order.quote)
         try:
-            response = make_api_request(self.__client.cancel_order, order.exchange_order_id, pair.name_for_exchange_clients, params)
+            response = make_api_request(self.__client.cancel_order, order.exchange_order_id,
+                                        pair.name_for_exchange_clients, params)
         except InvalidOrder as ex:
             if 'ORDER_NOT_OPEN' in ex.args[0]:
                 return None
@@ -86,10 +87,9 @@ class LiveExchangeService(ExchangeServiceAbc):
         return self.create_limit_order(order, **params)
 
     def create_limit_order(self, order: Order, **params) -> Optional[Order]:
-        # These integrations expect floats
         if self.exchange_id in [exchange_ids.bittrex, exchange_ids.kucoin]:
-            amount = float(order.amount)
-            price = float(order.price)
+            amount = float(round(order.amount, FinancialData.order_numerical_field_precision))
+            price = float(round(order.price, FinancialData.order_numerical_field_precision))
         else:
             amount = order.amount
             price = order.price
@@ -243,12 +243,12 @@ class LiveExchangeService(ExchangeServiceAbc):
                     response['tag'] = None
                 return DepositDestination(response['address'], response['tag'], DepositDestination.ok_status)
             return DepositDestination(None, None, DepositDestination.offline_status)
+        except InvalidAddress:
+            return DepositDestination(None, None, DepositDestination.not_found)
         except ExchangeError as ex:
-            if DepositDestination.offline_status in str(ex):
-                return DepositDestination(None, None, DepositDestination.offline_status)
-
-            if not any(phrase in str(ex) for phrase in ['Does not have currency code','address is invalid']):
+            if not any(phrase in str(ex) for phrase in ['Does not have currency code', 'address is invalid', 'binance: success value False']):
                 raise ex
+            return DepositDestination(None, None, DepositDestination.offline_status)
 
     def withdraw_all(self, currency, address, tag=None, params={}):
         """
@@ -366,7 +366,6 @@ class LiveExchangeService(ExchangeServiceAbc):
             self.__balances[currency] = Balance(**kwargs)
 
         return self.__balances
-
 
     ###########################################
     # Market state
