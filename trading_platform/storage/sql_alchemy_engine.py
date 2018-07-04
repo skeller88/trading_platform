@@ -120,11 +120,13 @@ class SqlAlchemyEngine:
     @classmethod
     def rds_engine(cls, **kwargs):
         return cls(dialect='postgres', driver='pg8000', username=DatabaseProperties.prod_db_username,
-                   password=DatabaseProperties.prod_db_password, host=DatabaseProperties.rds_host, port=5432, database='market_data',
+                   password=DatabaseProperties.prod_db_password, host=DatabaseProperties.rds_host,
+                   port=5432, database='market_data', debug=EnvProperties.debug,
                    **kwargs)
 
     @classmethod
     def local_engine_maker(cls, **kwargs):
         return cls(dialect='postgres', driver='pg8000', username='limiteduser',
                    password=DatabaseProperties.local_db_password, host='localhost', port=5432,
+                   debug=EnvProperties.debug,
                    database='market_data', **kwargs)
