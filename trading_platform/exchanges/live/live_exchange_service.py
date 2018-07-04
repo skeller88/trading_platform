@@ -246,7 +246,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         except InvalidAddress:
             return DepositDestination(None, None, DepositDestination.not_found)
         except ExchangeError as ex:
-            if not any(phrase in str(ex) for phrase in ['Does not have currency code', 'address is invalid', 'binance: success value False']):
+            if not any(phrase in str(ex) for phrase in ['Does not have currency code', 'address is invalid', 'binance: success value False', 'CURRENCY_OFFLINE']):
                 raise ex
             return DepositDestination(None, None, DepositDestination.offline_status)
 
