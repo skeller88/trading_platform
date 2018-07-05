@@ -62,7 +62,8 @@ class OrderExecutionService:
                 order.order_status = OrderStatus.pending
                 self.order_dao.save(popo=order, session=session, commit=True)
 
-            order_snapshot: Order = exchange_method(order, params=order.params)
+            params = order.params if order.params is not None else {}
+            order_snapshot: Order = exchange_method(order, params=params)
 
             self.save_order(order_snapshot, session)
 

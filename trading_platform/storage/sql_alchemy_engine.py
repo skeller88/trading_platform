@@ -51,7 +51,7 @@ class SqlAlchemyEngine:
         })
         self.debug = EnvProperties.debug
         print_if_debug_enabled(self.debug, 'connecting to database at {0} on port {1}'.format(host, port))
-        self.sql_alchemy_engine = create_engine(self.connection_string, echo=debug, **kwargs)
+        self.sql_alchemy_engine = create_engine(self.connection_string, echo=debug, pool_pre_ping=True, **kwargs)
         # sqlalchemy's API is confusingly named. session_factory creates Session instances.
         # http://docs.sqlalchemy.org/en/latest/orm/session_api.html#sqlalchemy.orm.session.Session
         session_maker: sessionmaker = sessionmaker(bind=self.sql_alchemy_engine, autocommit=False, autoflush=False)
