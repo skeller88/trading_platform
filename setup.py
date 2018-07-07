@@ -19,6 +19,7 @@ setuptools.setup(
         'numpy>=1.14,<1.14.99',
         'pandas>=0.23,<0.23.99',
         'pg8000>=1.12,<=1.12.1',
+        'pytest',
         'pytz',
         'simplejson>=3.16,<3.16.99',
         'smart_open',

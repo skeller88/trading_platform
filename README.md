@@ -12,6 +12,7 @@ deactivate
 source venv/bin/activate
 pip install -r requirements.txt
 ```
+jnLVJRd7d.x>ognU4B
 
 ## Serverless
 Make sure serverless is installed globally:

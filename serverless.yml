@@ -13,10 +13,20 @@ package:
 plugins:
   - serverless-python-requirements
 
+# The "functions" section shouldn't be needed because "package: individually" is not set to True,
+# but if this section is taken out, serverless fails with an error:
+# https://github.com/UnitedIncome/serverless-python-requirements/issues/161
+functions:
+  trading_platform:
+    handler: trading_platform
+    module: trading_platform
+    package:
+      include:
+        - trading_platform
+
 custom:
   pythonRequirements:
-    dockerizePip: true
-    # pull dependencies from private repos
+    dockerizePipe: true
     pipCmdExtraArgs:
       - --cache-dir
       - .requirements-cache

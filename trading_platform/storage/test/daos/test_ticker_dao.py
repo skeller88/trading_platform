@@ -1,16 +1,12 @@
 """
 nosetests test.storage.test_tickers_crud --nocapture
 """
-import unittest
 
-import sqlalchemy
-from nose.tools import assert_true, eq_, raises
+from nose.tools import eq_
 
-from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.storage.daos.ticker_dao import TickerDao
-from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
-from trading_platform.storage.test.test_dao import TestDao
+from trading_platform.storage.test.daos.test_dao import TestDao
 from trading_platform.utils.datetime_operations import utc_timestamp
 from trading_platform.core.test import data
 

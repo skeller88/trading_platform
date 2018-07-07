@@ -10,7 +10,7 @@ from trading_platform.core.test.util_methods import eq_ignore_certain_fields
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.order import Order
 from trading_platform.storage.daos.order_dao import OrderDao
-from trading_platform.storage.test.test_dao import TestDao
+from trading_platform.storage.test.daos.test_dao import TestDao
 
 
 class TestOrderDao(TestDao):
