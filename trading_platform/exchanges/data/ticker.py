@@ -171,6 +171,9 @@ class Ticker:
             'bid',
             'last',
 
+            'base_volume',
+            'quote_volume',
+
             'base',
             'quote',
 

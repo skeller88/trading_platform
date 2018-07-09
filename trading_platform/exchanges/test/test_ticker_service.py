@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from nose.tools import assert_greater, eq_
 
+from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.exchanges.data.utils import check_required_fields
 from trading_platform.exchanges.live import live_subclasses
@@ -51,7 +52,7 @@ class TestTickerService(unittest.TestCase):
             for row in reader:
                 num_rows += 1
                 ticker = Ticker.from_csv_data(row, Ticker.current_version)
-                check_required_fields(ticker)
+                TestTickerService.validate_ticker(ticker)
 
             eq_(num_rows, len(tickers))
 
@@ -59,6 +60,9 @@ class TestTickerService(unittest.TestCase):
     def validate_ticker(ticker):
         check_required_fields(ticker)
 
-        if ticker.version > ticker.first_version_with_volume_fields:
-            for field in ['base_volume', 'quote_volume']:
-                assert(getattr(ticker, field) is not None)
+        volume_fields_to_check = ['base_volume'] if ticker.exchange_id == exchange_ids.gdax else [
+            'base_volume', 'quote_volume']
+
+        if int(ticker.version) >= ticker.first_version_with_volume_fields:
+            for field in volume_fields_to_check:
+                assert (getattr(ticker, field) is not None)
