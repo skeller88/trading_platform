@@ -39,8 +39,6 @@ class Ticker:
         'bid',
         'last',
 
-        'base_volume',
-
         'base',
         'quote',
         'exchange_id',
@@ -49,6 +47,7 @@ class Ticker:
     ]
 
     nullable_fields = [
+        'base_volume',
         'quote_volume',
 
         'db_id',
