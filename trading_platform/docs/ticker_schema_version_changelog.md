@@ -1,3 +1,6 @@
+# v5
+Add 'base_volume' and 'quote_volume' fields.
+
 # v4
 Add the 'last' field. Round numerical/financial values to 15 decimal places using round().
 https://gist.github.com/jackiekazil/6201722#1-round-decimal-using-round

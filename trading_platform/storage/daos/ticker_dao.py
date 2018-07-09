@@ -1,8 +1,5 @@
-from _ast import List
+from sqlalchemy import and_
 
-from sqlalchemy import and_, inspect
-
-from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.storage.daos.dao import Dao
 from trading_platform.storage.sql_alchemy_dtos.sql_alchemy_ticker_dto import SqlAlchemyTickerDto
 

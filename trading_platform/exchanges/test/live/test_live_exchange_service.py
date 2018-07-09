@@ -116,10 +116,16 @@ class TestLiveExchangeService(unittest.TestCase):
     def test_fetch_latest_tickers(self):
         eq_(len(self.service.get_tickers()), 0)
         self.service.fetch_latest_tickers()
-        assert_greater(len(self.service.get_tickers()), 250)
+        # Gdax has the fewest amount of tickers at 6
+        assert len(self.service.get_tickers()) >= 6
 
         ticker = self.service.get_ticker(self.pair.name)
         check_required_fields(ticker)
+
+        if ticker.version > ticker.first_version_with_volume_fields:
+            for field in ['base_volume', 'quote_volume']:
+                assert(getattr(ticker, field) is not None)
+
         eq_(ticker.base, self.pair.base)
         eq_(ticker.quote, self.pair.quote)
 

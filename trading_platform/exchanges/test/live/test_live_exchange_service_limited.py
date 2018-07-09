@@ -26,7 +26,7 @@ class TestLiveExchangeServiceLimited(unittest.TestCase):
         else:
             credentials = exchange_service_credentials_for_exchange(cls.live_service_class)
             cls.service = cls.live_service_class(credentials.get('key'), credentials.get('secret'),
-                                             withdrawal_fees=None)
+                                                 withdrawal_fees=None)
         cls.pair = Pair(base='BTC', quote='ETH')
 
     ###########################################
@@ -40,6 +40,13 @@ class TestLiveExchangeServiceLimited(unittest.TestCase):
 
         ticker = self.service.get_ticker(self.pair.name)
         check_required_fields(ticker)
+
+        volume_fields_to_check = ['base_volume'] if self.service.exchange_id == exchange_ids.gdax else [
+            'base_volume', 'quote_volume']
+        if ticker.version > ticker.first_version_with_volume_fields:
+            for field in volume_fields_to_check:
+                assert (getattr(ticker, field) is not None)
+
         eq_(ticker.base, self.pair.base)
         eq_(ticker.quote, self.pair.quote)
 

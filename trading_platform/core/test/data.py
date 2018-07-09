@@ -248,9 +248,13 @@ def time_ordered_tickers():
     """
     base_kwargs = {
         'base': pair.base,
+        'quote': pair.quote,
+
+        'base_volume': FinancialData(1.23),
+        'quote_volume': FinancialData(4.89123),
+
         'exchange_id': exchange_ids.bittrex,
         'exchange_timestamp': now,
-        'quote': pair.quote,
         'db_id': None,
         'app_create_timestamp': now,
         'version': Ticker.current_version

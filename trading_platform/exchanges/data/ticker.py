@@ -1,5 +1,6 @@
 from trading_platform.exchanges.data import standardizers
 from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.exchanges.data.financial_data import FinancialData
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.utils.datetime_operations import utc_timestamp
 
@@ -29,12 +30,17 @@ class Ticker:
     The timestamps, on the other hand, are represented as floats. Decimal would offer a nanosecond level of precision,
     which is unnecessary: https://mail.python.org/pipermail/python-dev/2012-February/116837.html
     """
-    current_version = 4
+    # first ticker version that has volume fields
+    first_version_with_volume_fields = 5
+    current_version = 5
 
     required_fields = [
         'ask',
         'bid',
         'last',
+
+        'base_volume',
+
         'base',
         'quote',
         'exchange_id',
@@ -43,6 +49,8 @@ class Ticker:
     ]
 
     nullable_fields = [
+        'quote_volume',
+
         'db_id',
         'db_create_timestamp',
         'db_update_timestamp',
@@ -51,20 +59,25 @@ class Ticker:
 
     def __init__(self, **kwargs):
         """
-        :param ask:
-        :param bid:
-        :param version:
-        :param quote:
-        :param db_id:
-        :param app_create_timestamp:
-        :param exchange_timestamp:
-        :param base:
-        :param last: last price
-        :param exchange:
+        Args:
+            kwargs: Dict
+                ask:
+                bid:
+                version:
+                quote:
+                db_id:
+                app_create_timestamp:
+                exchange_timestamp:
+                base:
+                last: last price
+                exchange:
         """
         self.ask = kwargs.get('ask')
         self.bid = kwargs.get('bid')
         self.last = kwargs.get('last')
+
+        self.base_volume = kwargs.get('base_volume')
+        self.quote_volume = kwargs.get('quote_volume')
 
         self.base = kwargs.get('base')
         self.quote = kwargs.get('quote')
@@ -114,6 +127,10 @@ class Ticker:
         kwargs = {
             'ask': standardizers.bid_or_ask(ticker.get('ask')),
             'bid': standardizers.bid_or_ask(ticker.get('bid')),
+
+            'base_volume': FinancialData(ticker.get('baseVolume')),
+            'quote_volume': FinancialData(ticker.get('quoteVolume')),
+
             'exchange_id': exchange_id,
             'exchange_timestamp': ticker.get('timestamp'),
             'last': standardizers.last(ticker.get('last')),

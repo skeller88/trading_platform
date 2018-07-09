@@ -28,6 +28,9 @@ class TestTickerService(unittest.TestCase):
 
         """
         tickers = self.ticker_service_class.fetch_latest_tickers(self.exchange_services)
+
+        ticker: Ticker = tickers[0]
+        TestTickerService.validate_ticker(ticker)
         # As of 4/26/2018, there were 738 tickers across all 5 exchanges.
         assert_greater(len(tickers), 730)
         exchange_ids_set = set()
@@ -51,3 +54,11 @@ class TestTickerService(unittest.TestCase):
                 check_required_fields(ticker)
 
             eq_(num_rows, len(tickers))
+
+    @staticmethod
+    def validate_ticker(ticker):
+        check_required_fields(ticker)
+
+        if ticker.version > ticker.first_version_with_volume_fields:
+            for field in ['base_volume', 'quote_volume']:
+                assert(getattr(ticker, field) is not None)
