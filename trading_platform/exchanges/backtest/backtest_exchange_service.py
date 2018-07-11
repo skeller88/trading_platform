@@ -247,7 +247,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
     def fetch_orders(self, pair=None):
         raise NotImplementedError('fetch_orders')
 
-    def fetch_order(self, exchange_order_id: str, pair: Pair) -> Optional[Order]:
+    def fetch_order(self, exchange_order_id: str, pair: Pair, params) -> Optional[Order]:
         return self.orders.get(exchange_order_id)
 
     def buy_all(self, pair, price):

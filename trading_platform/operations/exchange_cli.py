@@ -93,8 +93,10 @@ order: Order = Order(**{
 # order = bittrex.fetch_order(exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7', pair=pair)
 # print(order.__dict__)
 
-orders = kucoin.fetch_closed_orders(pair=Pair(base='USDT', quote='BTC'))
-print(orders)
+
+order = kucoin.fetch_order(exchange_order_id='5b357eca87dcdf1045a51e9c', pair=pair, params={'type': OrderSide.buy_str})
+# orders = kucoin.fetch_closed_orders(pair=Pair(base='USDT', quote='BTC'))
+print(order)
 # orders = bittrex.fetch_open_orders(pair=pair)
 
 # list(map(lambda x: print(x[0], x[1].exchange_order_id), orders.items()))

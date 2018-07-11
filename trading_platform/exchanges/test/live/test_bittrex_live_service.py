@@ -49,7 +49,8 @@ class TestBittrexLiveService(TestLiveExchangeService):
         Returns:
 
         """
-        order: Order = self.service.fetch_order(exchange_order_id=self.exchange_order_id_for_cancelled_order)
+        order: Order = self.service.fetch_order(exchange_order_id=self.exchange_order_id_for_cancelled_order, pair=,
+                                                params=None)
         check_required_fields(order)
         eq_(order.exchange_id, self.live_service_class.exchange_id)
         assert (order.exchange_order_id is not None)
@@ -63,7 +64,8 @@ class TestBittrexLiveService(TestLiveExchangeService):
         Returns:
 
         """
-        order: Order = self.service.fetch_order(exchange_order_id=self.exchange_order_id_for_cancelled_and_filled_order)
+        order: Order = self.service.fetch_order(exchange_order_id=self.exchange_order_id_for_cancelled_and_filled_order,
+                                                pair=, params=None)
         check_required_fields(order)
         eq_(order.exchange_id, self.live_service_class.exchange_id)
         assert (order.exchange_order_id is not None)
@@ -76,7 +78,8 @@ class TestBittrexLiveService(TestLiveExchangeService):
         Returns:
 
         """
-        order: Order = self.service.fetch_order(exchange_order_id=self.exchange_order_id_for_filled_order)
+        order: Order = self.service.fetch_order(exchange_order_id=self.exchange_order_id_for_filled_order, pair=,
+                                                params=None)
         check_required_fields(order)
         eq_(order.exchange_id, self.live_service_class.exchange_id)
         assert (order.exchange_order_id is not None)

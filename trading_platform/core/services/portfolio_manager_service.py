@@ -1,11 +1,13 @@
+import logging
 from collections import defaultdict
 from decimal import Decimal
-from typing import Dict, List
+from typing import Dict, List, Optional
 
+from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.strategy_type import StrategyType
 from trading_platform.exchanges.data.financial_data import FinancialData, zero
 from trading_platform.exchanges.data.portfolio_allocation_request import PortfolioAllocationRequest
-from trading_platform.utils.exceptions import InsufficientFundsException
+from trading_platform.exchanges.data.strategy_portfolio import StrategyPortfolio
 
 
 class PortfolioManagerService:
@@ -87,15 +89,16 @@ class PortfolioManagerService:
     # balances that are free to be allocated into a portfolio
     free_balances = 'free_balances'
 
-    def __init__(self, portfolios_by_strategy: Dict[str, Dict[int, defaultdict[str, FinancialData]]],
+    def __init__(self, logger: logging.Logger,
+                 portfolios_by_strategy: Dict[str, StrategyPortfolio],
                  portfolio_percent_allocation_rules: Dict[
                      int, FinancialData] = default_portfolio_percent_allocation_rules):
         """
         Args:
-            portfolios_by_strategy: Dict[str, Dict[str, defaultdict[str, FinancialData]]]. The initial portfolios by strategy
+            portfolios_by_strategy: Dict[str, StrategyPortfolio]. The initial portfolios by strategy
                 id. A portfolio consists of the balances of the currencies allocated to the strategy on each exchange.
             Example: {
-                'nm_1': {'Binance': {'BTC': 1}}
+                'nm_1': <StrategyPortfolio instance>
             }
 
 
@@ -106,12 +109,13 @@ class PortfolioManagerService:
                 StrategyId.arb: .5
             }
         """
-        self.portfolios_by_strategy: Dict[str, Dict[int, defaultdict[str, FinancialData]]] = portfolios_by_strategy
+        self.logger = logger
+        self.portfolios_by_strategy: Dict[str, StrategyPortfolio] = portfolios_by_strategy
         self.portfolio_percent_allocation_rules: Dict[int, FinancialData] = portfolio_percent_allocation_rules
 
     def create_strategy_portfolio(self, strategy_type: int, strategy_id: str,
-                                      portfolio_allocation_requests: List[PortfolioAllocationRequest]) -> Dict[
-        int, defaultdict[Decimal]]:
+                                  portfolio_allocation_requests: List[PortfolioAllocationRequest]) -> Optional[
+        StrategyPortfolio]:
         """
         Args:
             strategy_type:
@@ -135,19 +139,18 @@ class PortfolioManagerService:
         if percent_allocation is None:
             raise Exception('strategy_type {0} not found'.format(strategy_type))
 
-        strategy_portfolio: Dict[int, defaultdict[Decimal]] = {}
-        exchange_ids = set(map(lambda request: request.exchange_id, portfolio_allocation_requests))
-        for exchange_id in exchange_ids:
-            # TODO - make defaultdict accept FinancialData
-            strategy_portfolio[exchange_id] = defaultdict(Decimal)
-
+        strategy_portfolio = StrategyPortfolio(exchange_ids.all_ids)
         for request in portfolio_allocation_requests:
-            currency_to_allocate: Decimal = percent_allocation * self.portfolios_by_strategy[self.free_balances][
+            currency_to_allocate: FinancialData = percent_allocation * self.portfolios_by_strategy[self.free_balances][
                 request.exchange_id].get(request.currency)
             if currency_to_allocate == zero:
-                raise InsufficientFundsException(
-                    'exchange_id {0}, currency {1}'.format(request.exchange_id, request.currency))
-            strategy_portfolio[request.exchange_id] = currency_to_allocate
+                self.logger.info('insufficient funds for portfolio_allocation_request for strategy_type {0}, '
+                                 'strategy_id {1}, exchange_id {0}, currency {1}'.format(strategy_type, strategy_id,
+                                                                                         request.exchange_id,
+                                                                                         request.currency))
+                return None
+
+            strategy_portfolio.free[request.exchange_id][request.currency] = currency_to_allocate
 
         self.portfolios_by_strategy[strategy_id] = strategy_portfolio
         return strategy_portfolio
@@ -157,3 +160,6 @@ class PortfolioManagerService:
 
     def update_strategy_portfolio(self, strategy_id: str, strategy_portfolio: Dict[int, defaultdict(Decimal)]):
         self.portfolios_by_strategy[strategy_id] = strategy_portfolio
+
+    def remove_strategy_portfolio(self, strategy_id: str):
+        del self.portfolios_by_strategy[strategy_id]

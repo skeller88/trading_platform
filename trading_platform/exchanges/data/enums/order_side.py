@@ -5,7 +5,9 @@ Enum representing buy side or sell side of an order.
 
 class OrderSide:
     buy = 0
+    buy_str = 'buy'
     sell = 1
+    sell_str = 'sell'
 
     @staticmethod
     def from_exchange_data(order_side_str):

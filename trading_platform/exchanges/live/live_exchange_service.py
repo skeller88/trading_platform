@@ -117,13 +117,20 @@ class LiveExchangeService(ExchangeServiceAbc):
     def fetch_closed_orders(self, pair=None, since=None, limit=None, params={}) -> Dict[str, Order]:
         return self.__client.fetch_closed_orders(pair.name_for_exchange_clients, since, limit, params)
 
-    def fetch_order(self, exchange_order_id=None, pair=None) -> Optional[Order]:
+    def fetch_order(self, exchange_order_id, pair, params) -> Optional[Order]:
         if pair is None:
             symbol = None
         else:
             symbol = pair.name_for_exchange_clients
 
-        response: Dict = make_api_request(self.__client.fetch_order, exchange_order_id, symbol)
+        if params is None:
+            params = {}
+
+        # OrderSide.order_side_str is lowercase. Kucoin expects uppercase
+        if self.exchange_id == exchange_ids.kucoin:
+            params['type'] = params['type'].upper()
+
+        response: Dict = make_api_request(self.__client.fetch_order, exchange_order_id, symbol, params)
 
         if response:
             order: Order = Order.from_fetch_order_exchange_response(response, self.exchange_id)

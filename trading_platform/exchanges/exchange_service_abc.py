@@ -70,7 +70,7 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
-    def fetch_order(self, exchange_order_id: str, pair: Pair) -> Optional[Order]:
+    def fetch_order(self, exchange_order_id: str, pair: Pair, params) -> Optional[Order]:
         pass
 
     @abstractmethod

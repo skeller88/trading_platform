@@ -90,7 +90,7 @@ class OrderExecutionService:
         exchange: ExchangeServiceAbc = self.exchanges_by_id.get(order.exchange_id)
         for attempt in range(self.num_order_status_checks):
             order_snapshot: Order = exchange.fetch_order(order.exchange_order_id,
-                                                         pair=Pair(base=order.base, quote=order.quote))
+                                                         pair=Pair(base=order.base, quote=order.quote), params=None)
             if order_snapshot is not None and order_snapshot.order_status == order_status:
                 self.save_order(order_snapshot, session)
                 return order_snapshot
@@ -123,8 +123,7 @@ class OrderExecutionService:
         exchange = self.exchanges_by_id.get(order.exchange_id)
         exchange_method = exchange.create_limit_buy_order if order.order_side == OrderSide.buy else exchange.create_limit_sell_order
 
-        order: Order = exchange.fetch_order(exchange_order_id=order.exchange_order_id,
-                                            symbol=self.pair.name_for_exchange_clients)
+        order: Order = exchange.fetch_order(exchange_order_id=order.exchange_order_id, pair=, params=None)
         # TODO will order_status ever == filled?
         if order.order_status == OrderStatus.filled:
             self.logger.info('sell order filled - exchange_exchange_order_id - {0}'.format(

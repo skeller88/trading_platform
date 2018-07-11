@@ -20,9 +20,9 @@ names_to_ids = {
     exchange_names.poloniex: poloniex,
 }
 
-ids_to_names = { id: name for name, id in names_to_ids.items()}
+all_ids = names_to_ids.values()
 
-all_ids = ids_to_names.keys()
+ids_to_names = { id: name for name, id in names_to_ids.items()}
 
 
 def from_name(name):

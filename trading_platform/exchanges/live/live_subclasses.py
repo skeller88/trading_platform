@@ -2,6 +2,8 @@
 An exchange client is "live" if it queries the actual exchange, not a disk or a stub. These methods are utility methods
 to select all ExchangeClientServiceAbc live subclasses and fetch the API keys and secrets for these subclasses.
 """
+from typing import List
+
 from trading_platform.aws_utils.parameter_store_service import ParameterStoreService
 from trading_platform.exchanges.live.binance_live_service import BinanceLiveService
 from trading_platform.exchanges.live.bittrex_live_service import BittrexLiveService
