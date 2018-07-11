@@ -58,13 +58,13 @@ class Defaults:
     initial_base_capital = FinancialData(20)
     initial_quote_capital = FinancialData(40)
 
-# tickers in USD
-tickers_to_usd = {
-    'BTC': FinancialData(8000),
-    'ETH': FinancialData(600),
-    'USDT': one,
-    'USD': one
-}
+    # tickers in USD
+    tickers_to_usd = {
+        'BTC': FinancialData(8000),
+        'ETH': FinancialData(600),
+        'USDT': one,
+        'USD': one
+    }
 
 markets = {
     # Profitable

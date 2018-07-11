@@ -18,6 +18,7 @@ from trading_platform.exchanges.live import live_subclasses
 exchange_services_by_id = live_subclasses.instantiate(live_subclasses.all_live())
 binance = exchange_services_by_id.get(exchange_ids.binance)
 bittrex = exchange_services_by_id.get(exchange_ids.bittrex)
+kucoin = exchange_services_by_id.get(exchange_ids.kucoin)
 
 
 def cancel_orders(pair):
@@ -85,8 +86,15 @@ order: Order = Order(**{
 # order = bittrex.cancel_order(order=order)
 # print(order.exchange_order_id)
 
+# trades = bittrex.fetch_orders(pair=Pair(base='BTC', quote='GTO'))
+# for trade in trades:
+#     print(trade)
+
 # order = bittrex.fetch_order(exchange_order_id='54ee8a42-0354-423e-9d23-8226c4a8e9c7', pair=pair)
 # print(order.__dict__)
+
+orders = kucoin.fetch_closed_orders(pair=Pair(base='USDT', quote='BTC'))
+print(orders)
 # orders = bittrex.fetch_open_orders(pair=pair)
 
 # list(map(lambda x: print(x[0], x[1].exchange_order_id), orders.items()))

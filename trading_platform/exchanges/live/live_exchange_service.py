@@ -169,6 +169,8 @@ class LiveExchangeService(ExchangeServiceAbc):
     def get_order(self, order_id) -> Optional[Order]:
         return self.__orders.get(order_id)
 
+    def fetch_my_trades(self, pair: Pair):
+        return self.__client.fetch_my_trades(symbol=pair.name_for_exchange_clients)
     ###########################################
     # Account State
     ###########################################

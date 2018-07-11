@@ -67,6 +67,7 @@ class Order:
     # Returns:
     financial_data_fields = [
         'amount',
+        'average',
         'filled',
         'price',
         'remaining'
@@ -98,6 +99,7 @@ class Order:
 
         # Cancelled orders and orders returned from the open_orders table won't have the following numerical fields:
         'amount',
+        'average',
         'filled',
         'price',
         'remaining',

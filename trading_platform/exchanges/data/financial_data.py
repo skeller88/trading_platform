@@ -36,6 +36,9 @@ class FinancialData:
             if number is not None:
                 print(ex)
 
+    def __mul__(self, other):
+        return self * other
+
 
 zero = FinancialData(0)
 

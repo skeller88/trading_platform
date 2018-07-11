@@ -17,6 +17,9 @@ data/backtest
 dist/**
 .requirements-cache/**
 
+# Test files
+**/.pytest_cache/**
+
 # Scratch files
 scratch/scratch.py
 
