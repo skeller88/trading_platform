@@ -8,6 +8,16 @@ Ideally a config file like .toml or .yaml would be used, but this works for now.
 import os
 
 
+class AwsProperties:
+    aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+    aws_access_key_secret = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+    @classmethod
+    def set_properties_from_env_variables(cls):
+        cls.aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+        cls.aws_access_key_secret = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+
 class DatabaseProperties:
     local_db_password = os.environ.get('LOCAL_DB_PASSWORD', '')
     local_db_username = os.environ.get('LOCAL_DB_USERNAME', '')

@@ -302,7 +302,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
         :return dict(str, Balance):
         Return a Balance object for compatibility with what LiveExchangeService returns
         """
-        return {currency: Balance(currency=currency, total=total) for currency, total in self.__balances.items()}
+        return {currency: Balance(currency=currency, free=total, total=total) for currency, total in self.__balances.items()}
 
     def set_buy_prices(self, buy_prices):
         """

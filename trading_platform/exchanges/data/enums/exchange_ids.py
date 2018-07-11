@@ -7,9 +7,11 @@ kraken = 3
 poloniex = 4
 kucoin = 5
 gemini = 6
+bitflyer = 7
 
 names_to_ids = {
     exchange_names.binance: binance,
+    exchange_names.bitflyer: bitflyer,
     exchange_names.bittrex: bittrex,
     exchange_names.gdax: gdax,
     exchange_names.gemini: gemini,

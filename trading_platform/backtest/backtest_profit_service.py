@@ -4,8 +4,8 @@ exchange balances across two exchanges, the high and the low exchange.
 """
 import pandas
 
+from trading_platform.exchanges.backtest.backtest_exchange_service import BacktestExchangeService
 from trading_platform.exchanges.data.financial_data import FinancialData, zero, one_hundred
-from trading_platform.exchanges.backtest.backtest_service import BacktestExchangeService
 
 
 class BacktestProfitService:
