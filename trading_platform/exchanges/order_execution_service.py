@@ -29,7 +29,8 @@ class OrderExecutionService:
     def execute_order_set(self, orders: Set[Order], write_pending_order: bool,
                           check_if_orders_filled: bool) -> Dict[str, Order]:
         def execute_order_with_session(order) -> Order:
-            return self.execute_order(order, self.scoped_session_maker(), write_pending_order, check_if_order_filled=check_if_orders_filled)
+            return self.execute_order(order, self.scoped_session_maker(), write_pending_order,
+                                      check_if_order_filled=check_if_orders_filled)
 
         order_execution_attempts: Iterable[Order] = map(execute_order_with_session, orders)
         executed_orders: Iterable[Order] = filter(lambda order: order is not None, order_execution_attempts)
@@ -123,7 +124,8 @@ class OrderExecutionService:
         exchange = self.exchanges_by_id.get(order.exchange_id)
         exchange_method = exchange.create_limit_buy_order if order.order_side == OrderSide.buy else exchange.create_limit_sell_order
 
-        order: Order = exchange.fetch_order(exchange_order_id=order.exchange_order_id, pair=, params=None)
+        order: Order = exchange.fetch_order(exchange_order_id=order.exchange_order_id,
+                                            pair=Pair(base=order.base, quote=order.quote), params=None)
         # TODO will order_status ever == filled?
         if order.order_status == OrderStatus.filled:
             self.logger.info('sell order filled - exchange_exchange_order_id - {0}'.format(
