@@ -157,6 +157,10 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
+    def fetch_latest_ticker(self, pair: Pair) -> Optional[Ticker]:
+        pass
+
+    @abstractmethod
     def fetch_latest_tickers(self) -> List[Ticker]:
         pass
 

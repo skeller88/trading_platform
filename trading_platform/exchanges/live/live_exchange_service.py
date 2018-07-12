@@ -403,7 +403,7 @@ class LiveExchangeService(ExchangeServiceAbc):
 
         return ticker_instances
 
-    def fetch_latest_ticker(self, pair) -> Optional[Ticker]:
+    def fetch_latest_ticker(self, pair: Pair) -> Optional[Ticker]:
         response: Dict = make_api_request(self.__client.fetch_ticker, pair.name_for_exchange_clients)
 
         if response is None:

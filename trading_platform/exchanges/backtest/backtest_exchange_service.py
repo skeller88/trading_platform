@@ -446,6 +446,9 @@ class BacktestExchangeService(ExchangeServiceAbc):
     def fetch_market_symbols(self):
         raise NotImplementedError('fetch_market_symbols')
 
+    def fetch_latest_ticker(self, pair: Pair) -> Optional[Ticker]:
+        return self.__tickers.get(pair.name)
+
     def fetch_latest_tickers(self) -> List[Ticker]:
         """
         Unlike LiveExchangeService, doesn't return latest tickers.
