@@ -6,4 +6,7 @@ class PortfolioAllocationRequest:
     def __init__(self, exchange_id: int, currency: str):
         self.exchange_id: int = exchange_id
         self.currency: str = currency
-        self.id = '{0}_{1}'.format(exchange_id, currency)
+
+    def __hash__(self):
+        """Overrides the default implementation"""
+        return hash(tuple(sorted(self.__dict__.items())))

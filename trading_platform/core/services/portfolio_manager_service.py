@@ -1,12 +1,11 @@
 import logging
-from decimal import Decimal
 from typing import Dict, List, Optional
 
 from trading_platform.exchanges.data.enums import exchange_ids
-from trading_platform.exchanges.data.enums.strategy_type import StrategyType
-from trading_platform.exchanges.data.financial_data import FinancialData, zero
+from trading_platform.exchanges.data.financial_data import FinancialData, zero, one
+from trading_platform.exchanges.data.portfolio import Portfolio
 from trading_platform.exchanges.data.portfolio_allocation_request import PortfolioAllocationRequest
-from trading_platform.exchanges.data.strategy_portfolio import StrategyPortfolio
+from trading_platform.utils.exceptions import PortfolioAllocationException
 
 
 class PortfolioManagerService:
@@ -32,69 +31,73 @@ class PortfolioManagerService:
     exchange.
 
     Execute
-    arb_btc_eth_1 - allocate 50% of each of current free balances - 1 BTC on binance and 4 ETH on bittrex
+    arb_btc_eth_1 - allocate 50% of each of current free balances - 1 BTC on binance and 2 ETH on bittrex
     portfolios_by_strategy: {
       'arb_btc_eth_1': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
       'free': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
     }
 
     arb_btc_eth_1 - rebalance 1 BTC from binance to bittrex and 1 ETH from bittrex to binance. Note that a strategy
-    may attempt to use the alloted balance before the deposit has completed. Waiting until completion is an enchancement
-    for later
+    may attempt to use the allotted balance before the deposit has completed. Waiting until completion is an enchancement
+    for later.
     portfolios_by_strategy: {
       'arb_btc_eth_1': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
       'free': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
     }
 
-    arb_btc_eth_1 - BTC buy order for ETH on bittrex is completed at a price of 3 ETH per BTC.
+    arb_btc_eth_1 - binance - buy 3 ETH, spend 1 BTC.
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'ETH': 2}, 'bittrex: {'ETH': 3} }
+      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'bittrex: {'ETH': 2} }
       'free': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
     }
 
-    arb_btc_eth_1 - ETH sell order for BTC on binance is completed at a sell price of 1.1 BTC per ETH
+    arb_btc_eth_1 - bittrex - sell 2 ETH, gain 1.2 BTC.
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'BTC': 1.1}, 'bittrex: {'ETH': 3} }
+      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
       'free': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
     }
 
-    receive buy signal for XRP. Execute buy order on binance.
+    receive buy signal for XRP.
     create "nm_xrp_1 execution" instance
     query portfolio manager for initial capital allocated to a new arbitrage strategy. It's 50% of free balance on exchange
-    to purchase.
+    to purchase (binance).
+    'nm_xrp_1' - add .5 BTC to portfolio
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'BTC': 1.1}, 'bittrex: {'ETH': 3} }
+      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
       'nm_xrp_1': {'binance': {'BTC': .5 } }
       'free': {'binance': {'BTC': .5}, 'bittrex: {'ETH': 2} }
     }
 
     Execute
 
-    nm_xrp_1 - buy XRP at 5000 XRP/BTC - remove .5 BTC on bittrex, allocate 5000 XRP on bittrex
+    nm_xrp_1 - bittrex - buy 5000 XRP, spend .5 BTC
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'bittrex': {'ETH': 3}, 'binance: {'BTC': 1.1} },
+      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
       'nm_xrp_1': {'bittrex': {'XRP': 5000 } }
       'free': {'binance': {'BTC': .5}, 'bittrex: {'ETH': 2} }
     }
-    nm_xrp_1 - sell 5000 XRP for 1.5 BTC - end strategy - remove 5000 XRP on bittrex
+
+    nm_xrp_1 - bittrex - sell 5000 XRP, gain 1.5 BTC
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'bittrex': {'ETH': 3}, 'binance: {'BTC': 1.1} },
+      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
+      'nm_xrp_1': {'bittrex': {'BTC': 1.5 } }
+      'free': {'binance': {'BTC': .5}, 'bittrex: {'ETH': 2} }
+    }
+
+    nm_xrp_1 - bittrex - release 1.5 BTC into "free" portfolio and end strategy.
+    portfolios_by_strategy: {
+      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
+      'nm_xrp_1': {'bittrex': {'BTC': 1.5 } }
       'free': {'binance': {'BTC': 2}, 'bittrex: {'ETH': 2} }
     }
     """
-    # Shouldn't have to redeploy platform when new strat is introduced. Just assume unique names are being used like: 'shaneco/arb', 'shaneco/newmkt'
-    default_portfolio_percent_allocation_rules: Dict[str, FinancialData] = {
-        StrategyType.arb: 0.5,
-        StrategyType.nm: 0.5
-    }
 
     # balances that are free to be allocated into a portfolio
     free_balances = 'free_balances'
 
     def __init__(self, logger: logging.Logger,
-                 portfolios_by_strategy: Dict[str, StrategyPortfolio],
-                 portfolio_percent_allocation_rules: Dict[
-                     int, FinancialData] = default_portfolio_percent_allocation_rules):
+                 portfolios_by_strategy: Dict[str, Portfolio],
+                 portfolio_percent_allocation_rules: Dict[int, FinancialData]):
         """
         Args:
             portfolios_by_strategy: Dict[str, StrategyPortfolio]. The initial portfolios by strategy
@@ -112,13 +115,12 @@ class PortfolioManagerService:
             }
         """
         self.logger = logger
-        self.portfolios_by_strategy: Dict[str, StrategyPortfolio] = portfolios_by_strategy
-        self.portfolio_percent_allocation_rules: Dict[int, Decimal] = portfolio_percent_allocation_rules
+        self.portfolios_by_strategy: Dict[str, Portfolio] = portfolios_by_strategy
+        self.portfolio_percent_allocation_rules: Dict[int, FinancialData] = portfolio_percent_allocation_rules
 
-    # allocate() might be a better name
-    def create_strategy_portfolio(self, strategy_type: int, strategy_id: str,
-                                  portfolio_allocation_requests: List[PortfolioAllocationRequest]) -> Optional[
-        StrategyPortfolio]:
+    def allocate_portfolio(self, strategy_type: str, strategy_id: str,
+                           portfolio_allocation_requests: List[PortfolioAllocationRequest]) -> Optional[
+        Portfolio]:
         """
         Args:
             strategy_type:
@@ -128,23 +130,19 @@ class PortfolioManagerService:
         Returns:
         """
         # check for duplicates
-        seen = set()
-        for request in portfolio_allocation_requests:
-            if request.id not in seen:
-                seen.add(request.id)
-            else:
-                raise Exception(
-                    'Duplicate PortfolioAllocationRequest found for exchange_id {0} and currency {1}'.format(request.id,
-                                                                                                             request.currency))
+        if len(portfolio_allocation_requests) != len(set(portfolio_allocation_requests)):
+            raise PortfolioAllocationException('Duplicate PortfolioAllocationRequest found')
 
         percent_allocation: FinancialData = self.portfolio_percent_allocation_rules.get(strategy_type)
 
         if percent_allocation is None:
-            raise Exception('strategy_type {0} not found'.format(strategy_type))
+            raise PortfolioAllocationException('percent_allocation for strategy_type {0} not found'.format(strategy_type))
+        elif not FinancialData(.01) <= percent_allocation <= one:
+            raise PortfolioAllocationException('percent_allocation {0} not in [.1, 1]'.format(percent_allocation))
 
-        strategy_portfolio = StrategyPortfolio(exchange_ids.all_ids)
+        portfolio = Portfolio(exchange_ids.all_ids)
         for request in portfolio_allocation_requests:
-            currency_to_allocate: FinancialData = percent_allocation * self.portfolios_by_strategy[self.free_balances][
+            currency_to_allocate: FinancialData = percent_allocation * self.portfolios_by_strategy[self.free_balances].free[
                 request.exchange_id].get(request.currency)
             if currency_to_allocate == zero:
                 self.logger.info('insufficient funds for portfolio_allocation_request for strategy_type {0}, '
@@ -153,16 +151,16 @@ class PortfolioManagerService:
                                                                                          request.currency))
                 return None
 
-            strategy_portfolio.free[request.exchange_id][request.currency] = currency_to_allocate
+            portfolio.free[request.exchange_id][request.currency] = currency_to_allocate
 
-        self.portfolios_by_strategy[strategy_id] = strategy_portfolio
-        return strategy_portfolio
+        self.portfolios_by_strategy[strategy_id] = portfolio
+        return portfolio
 
-    def get_strategy_portfolio(self, strategy_id: str) -> StrategyPortfolio:
+    def get_portfolio(self, strategy_id: str) -> Portfolio:
         return self.portfolios_by_strategy.get(strategy_id)
 
-    def update_strategy_portfolio(self, strategy_id: str, strategy_portfolio: StrategyPortfolio):
-        self.portfolios_by_strategy[strategy_id] = strategy_portfolio
+    def update_portfolio(self, strategy_id: str, portfolio: Portfolio):
+        self.portfolios_by_strategy[strategy_id] = portfolio
 
-    def remove_strategy_portfolio(self, strategy_id: str):
+    def remove_portfolio(self, strategy_id: str):
         del self.portfolios_by_strategy[strategy_id]

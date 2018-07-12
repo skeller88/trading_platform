@@ -8,3 +8,7 @@ class InsufficientFundsException(Exception):
 
 class DuplicateDataException(Exception):
     pass
+
+
+class PortfolioAllocationException(Exception):
+    pass
