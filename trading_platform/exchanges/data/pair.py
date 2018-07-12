@@ -1,4 +1,5 @@
 import re
+from typing import Optional, Tuple
 
 alphanumeric_set = '[A-Za-z0-9]'
 
@@ -18,7 +19,7 @@ class Pair:
         self.quote = quote
 
     @classmethod
-    def from_exchange_client_string(cls, pair_string):
+    def from_exchange_client_string(cls, pair_string) -> Optional['Pair']:
         """
         Args:
             pair_string str: Example, 'BTC/USDT'
@@ -27,6 +28,9 @@ class Pair:
 
         """
         quote, base = cls.from_string('/', pair_string)
+
+        if quote is None or base is None:
+            return None
         return cls(quote=quote, base=base)
 
     @classmethod
@@ -36,9 +40,13 @@ class Pair:
         return cls(quote=quote, base=base)
 
     @staticmethod
-    def from_string(separator_char, pair_string):
+    def from_string(separator_char, pair_string) -> Tuple[Optional[str], Optional[str]]:
         match_str = '({0}*){1}({2}*)'.format(alphanumeric_set, separator_char, alphanumeric_set)
-        match = re.match(match_str, pair_string)
+        try:
+            match = re.match(match_str, pair_string)
+        except TypeError:
+            print('Error when matching pair_string {0}'.format(pair_string))
+            return None, None
 
         if match is None:
             return None, None

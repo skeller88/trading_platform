@@ -123,6 +123,11 @@ class Ticker:
             return None, None
 
         pair = Pair.from_exchange_client_string(ticker.get('symbol'))
+
+        if pair is None:
+            print('No pair found for ticker data {0}'.format(ticker))
+            return None, None
+
         kwargs = {
             'ask': standardizers.bid_or_ask(ticker.get('ask')),
             'bid': standardizers.bid_or_ask(ticker.get('bid')),
