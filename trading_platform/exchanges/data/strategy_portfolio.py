@@ -1,5 +1,4 @@
 from collections import defaultdict
-from decimal import Decimal
 from typing import List, Dict
 
 from trading_platform.exchanges.data.financial_data import FinancialData

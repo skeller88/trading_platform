@@ -1,5 +1,4 @@
 import logging
-from collections import defaultdict
 from decimal import Decimal
 from typing import Dict, List, Optional
 
@@ -83,6 +82,7 @@ class PortfolioManagerService:
       'free': {'binance': {'BTC': 2}, 'bittrex: {'ETH': 2} }
     }
     """
+    # Shouldn't have to redeploy platform when new strat is introduced. Just assume unique names are being used like: 'shaneco/arb', 'shaneco/newmkt'
     default_portfolio_percent_allocation_rules: Dict[str, FinancialData] = {
         StrategyType.arb: 0.5,
         StrategyType.nm: 0.5
@@ -104,7 +104,7 @@ class PortfolioManagerService:
             }
 
 
-            portfolio_percent_allocation_rules" Dict[int, FinancialData]. The % of available portfolio per exchange and per
+            portfolio_percent_allocation_rules" Dict[int, Decimal]. The % of available portfolio per exchange and per
             currency requested that will be allocated to a new strategy instance, given its strategy type.
             Example: {
                 StrategyId.nm: .5
@@ -113,8 +113,9 @@ class PortfolioManagerService:
         """
         self.logger = logger
         self.portfolios_by_strategy: Dict[str, StrategyPortfolio] = portfolios_by_strategy
-        self.portfolio_percent_allocation_rules: Dict[int, FinancialData] = portfolio_percent_allocation_rules
+        self.portfolio_percent_allocation_rules: Dict[int, Decimal] = portfolio_percent_allocation_rules
 
+    # allocate() might be a better name
     def create_strategy_portfolio(self, strategy_type: int, strategy_id: str,
                                   portfolio_allocation_requests: List[PortfolioAllocationRequest]) -> Optional[
         StrategyPortfolio]:
