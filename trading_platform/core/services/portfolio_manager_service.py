@@ -33,27 +33,27 @@ class PortfolioManagerService:
     Execute
     arb_btc_eth_1 - allocate 50% of each of current free balances - 1 BTC on binance and 2 ETH on bittrex
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
+      'arb_btc_eth_1': {'binance': {'ETH': 2}, 'bittrex: {'BTC': 1} }
       'free': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
     }
 
-    arb_btc_eth_1 - rebalance 1 BTC from binance to bittrex and 1 ETH from bittrex to binance. Note that a strategy
+    arb_btc_eth_1 - rebalance 1 BTC from binance to bittrex and 2 ETH from bittrex to binance. Note that a strategy
     may attempt to use the allotted balance before the deposit has completed. Waiting until completion is an enchancement
     for later.
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
+      'arb_btc_eth_1': {'binance': {'ETH': 2}, 'bittrex: {'BTC': 1} }
       'free': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
     }
 
-    arb_btc_eth_1 - binance - buy 3 ETH, spend 1 BTC.
+    arb_btc_eth_1 - bittrex - buy 3 ETH, spend 1 BTC.
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'bittrex: {'ETH': 2} }
+      'arb_btc_eth_1': {'binance': {'ETH': 2}, 'bittrex: {'ETH': 3} }
       'free': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
     }
 
-    arb_btc_eth_1 - bittrex - sell 2 ETH, gain 1.2 BTC.
+    arb_btc_eth_1 - binance - sell 2 ETH, gain 1.2 BTC.
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
+      'arb_btc_eth_1': {'binance': {'ETH': 1.2}, 'binance': {'ETH': 3} }
       'free': {'binance': {'BTC': 1}, 'bittrex: {'ETH': 2} }
     }
 
@@ -63,7 +63,7 @@ class PortfolioManagerService:
     to purchase (binance).
     'nm_xrp_1' - add .5 BTC to portfolio
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
+      'arb_btc_eth_1': {'binance': {'ETH': 1.2}, 'binance': {'ETH': 3} }
       'nm_xrp_1': {'binance': {'BTC': .5 } }
       'free': {'binance': {'BTC': .5}, 'bittrex: {'ETH': 2} }
     }
@@ -72,21 +72,21 @@ class PortfolioManagerService:
 
     nm_xrp_1 - bittrex - buy 5000 XRP, spend .5 BTC
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
+      'arb_btc_eth_1': {'binance': {'ETH': 1.2}, 'binance': {'ETH': 3} }
       'nm_xrp_1': {'bittrex': {'XRP': 5000 } }
       'free': {'binance': {'BTC': .5}, 'bittrex: {'ETH': 2} }
     }
 
     nm_xrp_1 - bittrex - sell 5000 XRP, gain 1.5 BTC
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
+      'arb_btc_eth_1': {'binance': {'ETH': 1.2}, 'binance': {'ETH': 3} }
       'nm_xrp_1': {'bittrex': {'BTC': 1.5 } }
       'free': {'binance': {'BTC': .5}, 'bittrex: {'ETH': 2} }
     }
 
     nm_xrp_1 - bittrex - release 1.5 BTC into "free" portfolio and end strategy.
     portfolios_by_strategy: {
-      'arb_btc_eth_1': {'binance': {'ETH': 3}, 'binance': {'BTC': 1.2} }
+      'arb_btc_eth_1': {'binance': {'ETH': 1.2}, 'binance': {'ETH': 3} }
       'nm_xrp_1': {'bittrex': {'BTC': 1.5 } }
       'free': {'binance': {'BTC': 2}, 'bittrex: {'ETH': 2} }
     }
