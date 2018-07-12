@@ -17,7 +17,9 @@ class PortfolioManagerService:
     Allocate % of portfolio on each exchange to each strategy instance, and keep track of the current portfolio
     allocated to each instance.
 
-    Example usage of the service
+    Example usage of the service. Note that the dictionary value for each strategy id key is actually represented
+    by a StrategyPortfolio instance. The dictionary is to show the internals of the StrategyPortfolio.free property.
+
     Start
     binance - 2 BTC
     bittrex - 4 ETH
@@ -155,10 +157,10 @@ class PortfolioManagerService:
         self.portfolios_by_strategy[strategy_id] = strategy_portfolio
         return strategy_portfolio
 
-    def get_strategy_portfolio(self, strategy_id: str):
+    def get_strategy_portfolio(self, strategy_id: str) -> StrategyPortfolio:
         return self.portfolios_by_strategy.get(strategy_id)
 
-    def update_strategy_portfolio(self, strategy_id: str, strategy_portfolio: Dict[int, defaultdict(Decimal)]):
+    def update_strategy_portfolio(self, strategy_id: str, strategy_portfolio: StrategyPortfolio):
         self.portfolios_by_strategy[strategy_id] = strategy_portfolio
 
     def remove_strategy_portfolio(self, strategy_id: str):

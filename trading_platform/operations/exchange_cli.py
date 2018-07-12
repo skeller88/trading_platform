@@ -6,6 +6,7 @@ Interact with exchanges without logging in or running tests. Common operations i
 - Checking order status
 """
 import json
+from time import sleep
 
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.enums.order_side import OrderSide
@@ -52,6 +53,7 @@ def fetch_balances():
 
 pair = Pair(base='USDT', quote='BTC')
 # pair = Pair(base='BTC', quote='ZEN')
+pair = Pair(base='BTC', quote='ETH')
 
 order: Order = Order(**{
     # app metadata
@@ -66,8 +68,8 @@ order: Order = Order(**{
     'base': pair.base,
     'quote': pair.quote,
 
-    'amount': FinancialData(0.005),
-    'price': FinancialData(6200),
+    'amount': FinancialData(0.0446458),
+    'price': FinancialData(.06),
 })
 
 # with open('/Users/shanekeller/Documents/trading_platform/trading_platform/exchanges/data/cryptocurrencies.json', 'r') as f:
@@ -80,6 +82,12 @@ order: Order = Order(**{
 #             if dd is not None and dd.status != 'ok':
 #                 print(market, exchange.exchange_name, dd.status, '\n')
 
+while True:
+    ticker = binance.fetch_latest_ticker(pair)
+    print(ticker.__dict__)
+    sleep(4)
+# bittrex.fetch_balances()
+# print(bittrex.get_balance('BTC').free)
 # order_resp = bittrex.create_limit_sell_order(order)
 # print(order_resp.__dict__)
 
@@ -94,9 +102,9 @@ order: Order = Order(**{
 # print(order.__dict__)
 
 
-order = kucoin.fetch_order(exchange_order_id='5b357eca87dcdf1045a51e9c', pair=pair, params={'type': OrderSide.buy_str})
+# order = kucoin.fetch_order(exchange_order_id='5b357eca87dcdf1045a51e9c', pair=pair, params={'type': OrderSide.buy_str})
 # orders = kucoin.fetch_closed_orders(pair=Pair(base='USDT', quote='BTC'))
-print(order)
+# print(order)
 # orders = bittrex.fetch_open_orders(pair=pair)
 
 # list(map(lambda x: print(x[0], x[1].exchange_order_id), orders.items()))

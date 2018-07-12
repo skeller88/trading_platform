@@ -11,6 +11,8 @@ from typing import Dict, Callable, List, Optional
 
 import pandas
 from nose.tools import eq_, assert_true, assert_greater, assert_almost_equals
+
+from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.exchanges.live.binance_live_service import BinanceLiveService
 
 from trading_platform.core.test.data import Defaults
@@ -113,6 +115,12 @@ class TestLiveExchangeService(unittest.TestCase):
     ###########################################
     # Market state
     ###########################################
+    def test_fetch_latest_ticker(self):
+        ticker: Ticker = self.service.fetch_latest_ticker(self.pair)
+        check_required_fields(ticker)
+        eq_(ticker.base, self.pair.base)
+        eq_(ticker.quote, self.pair.quote)
+
     def test_fetch_latest_tickers(self):
         eq_(len(self.service.get_tickers()), 0)
         self.service.fetch_latest_tickers()
