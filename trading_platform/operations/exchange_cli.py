@@ -6,6 +6,7 @@ Interact with exchanges without logging in or running tests. Common operations i
 - Checking order status
 """
 import json
+import os
 from time import sleep
 
 from trading_platform.exchanges.data.enums import exchange_ids
@@ -16,6 +17,7 @@ from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.live import live_subclasses
 
+profile = os.environ.get('AWS_PROFILE')
 exchange_services_by_id = live_subclasses.instantiate(live_subclasses.all_live())
 binance = exchange_services_by_id.get(exchange_ids.binance)
 bittrex = exchange_services_by_id.get(exchange_ids.bittrex)

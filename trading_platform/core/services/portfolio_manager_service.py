@@ -16,7 +16,7 @@ class PortfolioManagerService:
     allocated to each instance.
 
     Example usage of the service. Note that the dictionary value for each strategy id key is actually represented
-    by a StrategyPortfolio instance. The dictionary is to show the internals of the StrategyPortfolio.free property.
+    by a StrategyPortfolio instance. The dictionary shows the internals of the StrategyPortfolio.free property.
 
     Start
     binance - 2 BTC
