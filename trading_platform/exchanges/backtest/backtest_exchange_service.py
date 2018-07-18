@@ -16,10 +16,8 @@ opinion is that multiple composition is more flexible and a bit easier to reason
 See an example here http://python-3-patterns-idioms-test.readthedocs.io/en/latest/Fronting.html
 """
 import datetime
-import math
 import random
 from collections import defaultdict
-from decimal import Decimal
 from functools import reduce
 from heapq import heappush, heappop
 from typing import Dict, Optional, List
@@ -35,7 +33,6 @@ from trading_platform.exchanges.data.order import Order
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
-from trading_platform.utils.datetime_operations import utc_timestamp
 from trading_platform.utils.exceptions import InsufficientFundsException
 from trading_platform.utils.logging import print_if_debug_enabled
 
@@ -66,7 +63,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
         self.__withdrawal_fees = withdrawal_fees
 
         # Store the state of balances
-        self.__balances = defaultdict(Decimal)
+        self.__balances: Dict[str, Balance] = defaultdict(Balance.instance_with_zero_value_fields)
 
         # Stores the last buy price of a given currency pair. Used for calculating capital gains and losses.
         # updated for a given pair during a buy order or deposit from another exchange.
@@ -74,7 +71,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
         self.__buy_prices = {}
 
         # Used to calculate capital gains or losses with respect to USDT.
-        self.usdt_tickers = {}
+        self.usdt_tickers: Dict[str, FinancialData] = {}
 
         # In USDT. Used to calculate taxes. Updated on every create_limit_sell_order().
         self.capital_gains = zero
@@ -120,12 +117,19 @@ class BacktestExchangeService(ExchangeServiceAbc):
         if self.below_min_base_order_value(base_plus_fees, one):
             return zero
         # deal with small rounding errors
-        if (self.__balances[base] - base_plus_fees) / abs(base_plus_fees) >= -1e-6:
+        if (self.__balances[base].total - base_plus_fees) / abs(base_plus_fees) >= -1e-6:
             self.print_balances()
-            self.__balances[base] -= base_plus_fees
+            self.__balances[base].free -= base_plus_fees
+            self.__balances[base].locked -= base_plus_fees
+            self.__balances[base].total -= base_plus_fees
             # deal with small rounding errors
-            self.__balances[base] = max(self.__balances[base], zero)
-            self.__balances[quote] += amount
+            self.__balances[base].free = max(self.__balances[base], zero)
+            self.__balances[base].locked = max(self.__balances[base], zero)
+            self.__balances[base].total = max(self.__balances[base], zero)
+
+            self.__balances[quote].free += amount
+            self.__balances[quote].locked += amount
+            self.__balances[quote].total += amount
             self.print_balances()
             pair_name: str = Pair.name_for_base_and_quote(base=base, quote=quote)
             self.__buy_prices[pair_name] = price
@@ -152,7 +156,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
             return order
         else:
             raise InsufficientFundsException('{0} base needed to buy {1} of quote, only {2} base available'.format(
-                base_plus_fees, amount, self.__balances[base]))
+                base_plus_fees, amount, self.__balances[base].free))
 
     def create_limit_sell_order(self, order, params=None):
         """
@@ -194,11 +198,16 @@ class BacktestExchangeService(ExchangeServiceAbc):
             return insufficient_order_size
         if self.below_min_base_order_value(amount, price):
             return insufficient_order_size
-        if self.__balances[quote] >= amount:
+        if self.__balances[quote].free >= amount:
             # print(self.name + "\tSelling\t%f@%f" % (amount, self.ticker))
             base_amount_received = price * amount / (one + self.trade_fee)
-            self.__balances[base] += base_amount_received
-            self.__balances[quote] -= amount
+            self.__balances[base].free += base_amount_received
+            self.__balances[base].locked += base_amount_received
+            self.__balances[base].total += base_amount_received
+
+            self.__balances[quote].free -= amount
+            self.__balances[quote].locked -= amount
+            self.__balances[quote].total -= amount
 
             pair_name: str = Pair.name_for_base_and_quote(base=base, quote=quote)
             gross = (price - self.__buy_prices[pair_name]) * FinancialData(amount)
@@ -251,7 +260,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
         return self.orders.get(exchange_order_id)
 
     def buy_all(self, pair, price):
-        amount = FinancialData(self.__balances[pair.base] / (price * (one + self.trade_fee)))
+        amount = FinancialData(self.__balances[pair.base].free / (price * (one + self.trade_fee)))
 
         order: Order = Order(**{
             'base': pair.base,
@@ -291,18 +300,25 @@ class BacktestExchangeService(ExchangeServiceAbc):
     # Account state
     ###########################################
     def get_balance(self, currency) -> Balance:
-        total: FinancialData \
-            = self.__balances[currency]
+        """
+        Get Balance for currency. Assumes self.__balances is defaultdict(Balance.instance_with_zero_value_fields)
+        Args:
+            currency:
 
-        return Balance(currency=currency, total=total, free=total,
-                       locked=zero) if total is not None else Balance.instance_with_zero_value_fields()
+        Returns:
+
+        """
+        return self.__balances[currency]
+
+    def get_balances(self) -> Dict[str, Balance]:
+        return self.__balances
 
     def fetch_balances(self) -> Dict[str, Balance]:
         """
         :return dict(str, Balance):
         Return a Balance object for compatibility with what LiveExchangeService returns
         """
-        return {currency: Balance(currency=currency, free=total, total=total) for currency, total in self.__balances.items()}
+        return self.__balances
 
     def set_buy_prices(self, buy_prices):
         """
@@ -313,7 +329,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
         """
         self.__buy_prices = buy_prices
 
-    def set_usdt_tickers(self, usdt_tickers: Dict):
+    def set_usdt_tickers(self, usdt_tickers: Dict[str, FinancialData]):
         self.usdt_tickers = usdt_tickers
 
     def set_buy_price(self, pair_name, buy_price):
@@ -326,39 +342,39 @@ class BacktestExchangeService(ExchangeServiceAbc):
         return self.__buy_prices.get(pair_name)
 
     @staticmethod
-    def total_usdt_value(funds, end_tickers):
+    def total_usdt_value(balances: Dict[str, Balance], tickers: Dict[str, Ticker]) -> FinancialData:
         """
-        Value of all funds in USDT currency. First, calculates the value of all tickers in BTC or
+        Value of all balances in USDT currency. First, calculates the value of all tickers in BTC or
         ETH. Then, converts to USDT.
 
         This method is static because for backtesting, the value of the exchange balance at various points in time
         needs to be calculated.
 
         Args:
-            funds: can be either capital gains or balances
-            end_tickers: assumed to have the same base
+            balances: can be either capital gains or balances
+            tickers:
 
         Returns FinancialData:
 
         """
 
-        def usdt_value(total_usdt_value, currency):
-            usdt_pair = Pair(base='USDT', quote=currency)
-            currency_usdt_price = end_tickers.get(usdt_pair.name)
+        def usdt_value(total_usdt_value: FinancialData, currency: str) -> FinancialData:
+            usdt_pair: Pair = Pair(base='USDT', quote=currency)
+            currency_usdt_price: FinancialData = tickers.get(usdt_pair.name).last
 
             if currency_usdt_price is None:
                 for base in ['BTC', 'ETH']:
-                    pair = Pair(base=base, quote=currency)
-                    currency_base_price = end_tickers.get(pair.name)
+                    pair: Pair = Pair(base=base, quote=currency)
+                    currency_base_price: FinancialData = tickers.get(pair.name).last
                     if currency_base_price is not None:
-                        usdt_pair = Pair(base='USDT', quote=base)
-                        base_usdt_price = end_tickers.get(usdt_pair.name)
-                        currency_usdt_price = currency_base_price * base_usdt_price
+                        usdt_pair: Pair = Pair(base='USDT', quote=base)
+                        base_usdt_price: FinancialData = tickers.get(usdt_pair.name).last
+                        currency_usdt_price: FinancialData = currency_base_price * base_usdt_price
                         break
 
-            return total_usdt_value + funds.get(currency, zero) * currency_usdt_price
+            return total_usdt_value + balances.get(currency, zero) * currency_usdt_price
 
-        return FinancialData(reduce(usdt_value, funds, zero))
+        return FinancialData(reduce(usdt_value, balances, zero))
 
     def base_needed_to_buy_currency_after_trade_fees(self, amount, price):
         """
@@ -527,7 +543,9 @@ class BacktestExchangeService(ExchangeServiceAbc):
             pd_dt = datetime.datetime.fromtimestamp(pending_deposit_completion_timestamp)
             c_dt = datetime.datetime.fromtimestamp(current_timestamp)
             deposit = heappop(self.__pending_deposits)
-            self.__balances[deposit[1]] += deposit[2]
+            self.__balances[deposit[1]].free += deposit[2]
+            self.__balances[deposit[1]].locked += deposit[2]
+            self.__balances[deposit[1]].total += deposit[2]
 
     def fetch_deposit_destination(self, currency, params):
         """

@@ -17,7 +17,7 @@ from trading_platform.exchanges.ticker_service import TickerService
 from trading_platform.storage.daos.balance_dao import BalanceDao
 
 
-class TestProfitServiceBacktest(unittest.TestCase):
+class TestBacktestProfitService(unittest.TestCase):
     @classmethod
     def setUp(cls):
         cls.exchange_services = backtest_subclasses.instantiate()
@@ -42,7 +42,7 @@ class TestProfitServiceBacktest(unittest.TestCase):
         cls.kwargs = {
             'balance_dao': BalanceDao(),
             'ticker_service': cls.ticker_service,
-            'start_balance_usd_value': cls.initial_usd_value,
+            'start_balance_usdt_value': cls.initial_usd_value,
             'initial_tickers': cls.initial_tickers
         }
 
@@ -64,9 +64,9 @@ class TestProfitServiceBacktest(unittest.TestCase):
         eq_(profit_service.ltcg_tax, Defaults.ltcg_tax)
         eq_(profit_service.initial_tickers, self.initial_tickers)
 
-    def test_balance_usd_value(self):
+    def test_balance_usdt_value(self):
         profit_service = ProfitService(**self.kwargs)
-        usd_value = profit_service.exchange_balances_usd_value(self.exchange_services, self.end_tickers)
+        usd_value = profit_service.exchange_balances_usdt_value(self.exchange_services, self.end_tickers)
         # Since tickers are always changing and exchange balances will change, the best we can do
         # is assert greater than zero, and verify manually that the total balance is what's expected.
         assert_greater(usd_value, zero)
@@ -90,7 +90,7 @@ class TestProfitServiceBacktest(unittest.TestCase):
         Assert that the profit summary has all of the expected fields, and that their values are approximately
         what would be expected.
 
-        The following test assumes that the current usd value of all exchange balances is << start_balance_usd_value of
+        The following test assumes that the current usd value of all exchange balances is << start_balance_usdt_value of
         10000, and that btc has significantly increased in value. in other words, high losses on the strategy
         strategy, and high gains on buy and hold. In this case, bh_taxes > taxes, bh_return >> strat_return,
         and gross_profits < 0.
@@ -127,7 +127,7 @@ class TestProfitServiceBacktest(unittest.TestCase):
          Assert that the profit summary has all of the expected fields, and that their values are approximately
         what would be expected.
 
-        The following test assumes that the current usd value of all exchange balances is >> start_balance_usd_value of
+        The following test assumes that the current usd value of all exchange balances is >> start_balance_usdt_value of
         50, and that btc has decreased in value. in other words, high gains on the strategy
         strategy, and high losses on buy and hold. In this case, taxes > bh_taxes, strat_return >> bh_return,
         and gross_profits > 0.
@@ -135,12 +135,13 @@ class TestProfitServiceBacktest(unittest.TestCase):
         Returns:
 
         """
-        self.kwargs['start_balance_usd_value'] = FinancialData(50)
+        self.kwargs['start_balance_usdt_value'] = FinancialData(50)
         ps = ProfitService(**self.kwargs)
         end_btc_ticker = copy(self.kwargs['initial_tickers'].get(self.btc_usdt_pair.name))
         end_btc_ticker.bid = end_btc_ticker.bid * (one - FinancialData(.1))
         self.end_tickers[self.btc_usdt_pair.name] = end_btc_ticker
         profit_summary = ps.profit_summary(self.exchange_services, self.end_tickers)
+        print(profit_summary)
         for field in ps.profit_summary_fields:
             assert(profit_summary.get(field) is not None)
 

@@ -55,6 +55,13 @@ class Balance:
         """Overrides the default implementation"""
         return hash(tuple(sorted(self.__dict__.items())))
 
+    def __add__(self, other):
+        if other is None:
+            return
+        self.free += other.free
+        self.locked += other.locked
+        self.total += other.total
+
     @classmethod
     def instance_with_zero_value_fields(cls):
         """

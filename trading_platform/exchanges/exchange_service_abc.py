@@ -137,6 +137,15 @@ class ExchangeServiceAbc(ABC):
         pass
 
     @abstractmethod
+    def get_balances(self) -> Dict[str, Balance]:
+        """
+        Unlike fetch_balances(), should not result in a HTTP request
+        Returns:
+
+        """
+        pass
+
+    @abstractmethod
     def fetch_balances(self) -> Dict[str, Balance]:
         pass
 

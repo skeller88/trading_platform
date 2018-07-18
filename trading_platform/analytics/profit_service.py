@@ -7,12 +7,16 @@ Ideally, it would, but as an initial effort, the service will subtract the strat
 """
 from collections import defaultdict
 from decimal import Decimal
+from typing import Dict, List
 
 import pandas
 
 from trading_platform.core.test.data import Defaults
-from trading_platform.exchanges.data.financial_data import zero, one, one_hundred
+from trading_platform.exchanges.data.balance import Balance
+from trading_platform.exchanges.data.financial_data import zero, one, one_hundred, FinancialData
 from trading_platform.exchanges.data.pair import Pair
+from trading_platform.exchanges.data.ticker import Ticker
+from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
 
 
 class ProfitService:
@@ -20,12 +24,12 @@ class ProfitService:
     Relevant tax reading:
     - wash sale: https://www.investopedia.com/terms/t/tax_selling.asp
     """
-    possible_bases = ['USDT', 'BTC', 'ETH']
-    income_tax = Defaults.income_tax
-    ltcg_tax = Defaults.ltcg_tax
-    usdt_str = 'USDT'
+    possible_bases: List[str] = ['USDT', 'BTC', 'ETH']
+    income_tax: FinancialData = Defaults.income_tax
+    ltcg_tax: FinancialData = Defaults.ltcg_tax
+    usdt_str: str = 'USDT'
     # fields contained in the response from self.profit_summary()
-    profit_summary_fields = [
+    profit_summary_fields: List[str] = [
         'alpha',
         'net_profits_over_bh',
 
@@ -43,75 +47,72 @@ class ProfitService:
    ]
 
     def __init__(self, **kwargs):
-        self.balance_dao = kwargs.get('balance_dao')
         self.ticker_service = kwargs.get('ticker_service')
-        self.start_balance_usd_value = kwargs.get('start_balance_usd_value')
+        self.start_balance_usdt_value = kwargs.get('start_balance_usdt_value')
         self.initial_tickers = kwargs.get('initial_tickers')
         self.balances = {}
         self.tickers = {}
         self.profit_history = []
 
-    def fetch_balances_by_currency(self, exchange_services):
+    def fetch_balances_by_currency(self, exchange_services) -> Dict[str, FinancialData]:
         # TODO - figure out how to make this class FinancialData instead of Decimal
         balances = defaultdict(Decimal)
         for exchange_service in exchange_services.values():
-            balances_for_exchange = exchange_service.fetch_balances()
+            balances_for_exchange: Dict[str, Balance] = exchange_service.fetch_balances()
             for currency_name, balance in balances_for_exchange.items():
-                balance = balances_for_exchange.get(currency_name)
-                balance_value = balance.total if balance is not None else zero
-                balances[currency_name] += balance_value
+                balance: Balance = balances_for_exchange.get(currency_name)
+                balances[currency_name] += balance.total
 
         self.balances = balances
         return self.balances
 
-    def exchange_balances_usd_value(self, exchange_services, tickers_by_pair_name):
-        balances = self.fetch_balances_by_currency(exchange_services)
+    def exchange_balances_usdt_value(self, exchange_services, tickers_by_pair_name):
+        balances: Dict[str, FinancialData] = self.fetch_balances_by_currency(exchange_services)
 
-        usd_value = zero
+        usdt_value: FinancialData = zero
 
-        for currency_name, amount in balances.items():
-            usd_ticker = self.usd_value_for_currency(currency_name, tickers_by_pair_name)
-            usd_value += amount * usd_ticker
+        for currency_name, balance in balances.items():
+            usdt_value += balance * self.usdt_value_for_currency(currency_name, tickers_by_pair_name)
 
-        return usd_value
+        return usdt_value
 
-    def usd_value_for_currency(self, currency, tickers):
+    def usdt_value_for_currency(self, currency, tickers):
         if currency == self.usdt_str:
             return one
 
         for base in self.possible_bases:
-            ticker = tickers.get(Pair.name_for_base_and_quote(quote=currency, base=base))
+            ticker: Ticker = tickers.get(Pair.name_for_base_and_quote(quote=currency, base=base))
             if ticker:
                 if base == self.usdt_str:
                     return ticker.bid
                 else:
-                    base_ticker_in_usd = tickers.get(Pair.name_for_base_and_quote(quote=base, base=self.usdt_str))
+                    base_ticker_in_usd: Ticker = tickers.get(Pair.name_for_base_and_quote(quote=base, base=self.usdt_str))
                     return ticker.bid * base_ticker_in_usd.bid
 
-    def profit_summary(self, exchange_services, end_tickers):
+    def profit_summary(self, exchange_services: Dict[int, ExchangeServiceAbc], end_tickers: Dict[str, Ticker]):
         """
-        Profit summary for strategy and buy and hold BTC.
+        Profit summary for strategy vs. buy and hold BTC.
         :param exchange_services:
-        :param end_tickers: Assumes that tickers are pretty much the same across all exchanges.
+        :param end_tickers: Assumes that tickers are the same across all exchanges.
         :return:
         """
-        end_balance_usd_value = self.exchange_balances_usd_value(exchange_services, end_tickers)
-        gross_profits = end_balance_usd_value - self.start_balance_usd_value
-        taxes = max(gross_profits * (one - self.income_tax), zero)
-        net_profits = gross_profits - taxes
-        strat_return = net_profits / self.start_balance_usd_value * one_hundred
+        end_balance_usdt_value: FinancialData = self.exchange_balances_usdt_value(exchange_services, end_tickers)
+        gross_profits: FinancialData = end_balance_usdt_value - self.start_balance_usdt_value
+        taxes: FinancialData = max(gross_profits * (one - self.income_tax), zero)
+        net_profits: FinancialData = gross_profits - taxes
+        strat_return: FinancialData = net_profits / self.start_balance_usdt_value * one_hundred
 
-        btc_usdt_pair_name = Pair.name_for_base_and_quote(base='USDT', quote='BTC')
-        inital_btc_ticker = self.initial_tickers.get(btc_usdt_pair_name)
-        end_btc_ticker = end_tickers.get(btc_usdt_pair_name)
-        bh_gross_profits = (end_btc_ticker.bid - inital_btc_ticker.bid) / inital_btc_ticker.bid * self.start_balance_usd_value
-        bh_taxes = max(bh_gross_profits * (one - self.ltcg_tax), zero)
-        bh_net_profits = bh_gross_profits - bh_taxes
-        bh_return = bh_net_profits / self.start_balance_usd_value * one_hundred
+        btc_usdt_pair_name: str = Pair.name_for_base_and_quote(base='USDT', quote='BTC')
+        inital_btc_ticker: FinancialData = self.initial_tickers.get(btc_usdt_pair_name)
+        end_btc_ticker: FinancialData = end_tickers.get(btc_usdt_pair_name)
+        bh_gross_profits: FinancialData = (end_btc_ticker.bid - inital_btc_ticker.bid) / inital_btc_ticker.bid * self.start_balance_usdt_value
+        bh_taxes: FinancialData = max(bh_gross_profits * (one - self.ltcg_tax), zero)
+        bh_net_profits: FinancialData = bh_gross_profits - bh_taxes
+        bh_return: FinancialData = bh_net_profits / self.start_balance_usdt_value * one_hundred
 
-        alpha = strat_return - bh_return
-        net_profits_over_bh = net_profits - bh_net_profits
-        profit_summary = {
+        alpha: FinancialData = strat_return - bh_return
+        net_profits_over_bh: FinancialData = net_profits - bh_net_profits
+        profit_summary: Dict = {
             'alpha': alpha,
             'net_profits_over_bh': net_profits_over_bh,
 
@@ -140,8 +141,8 @@ class ProfitService:
 
         """
 
-        snapshots_with_flattened_keys = list(map(self.flatten_snapshot, self.profit_history))
-        df = pandas.DataFrame(snapshots_with_flattened_keys)
+        snapshots_with_flattened_keys: List[Dict] = list(map(self.flatten_snapshot, self.profit_history))
+        df: pandas.DataFrame = pandas.DataFrame(snapshots_with_flattened_keys)
         df.to_csv(dest_path, index=False)
 
     @staticmethod
@@ -162,7 +163,7 @@ class ProfitService:
         Returns:
 
         """
-        flattened_snapshot = {}
+        flattened_snapshot: Dict = {}
 
         for key, val in profit_snapshot.items():
             if key == 'balances':
