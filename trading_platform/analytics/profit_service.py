@@ -7,6 +7,7 @@ Ideally, it would, but as an initial effort, the service will subtract the strat
 """
 from collections import defaultdict
 from decimal import Decimal
+from functools import reduce
 from typing import Dict, List
 
 import pandas
@@ -46,13 +47,13 @@ class ProfitService:
         'bh_net_profits',
    ]
 
-    def __init__(self, **kwargs):
-        self.ticker_service = kwargs.get('ticker_service')
-        self.start_balance_usdt_value = kwargs.get('start_balance_usdt_value')
-        self.initial_tickers = kwargs.get('initial_tickers')
-        self.balances = {}
-        self.tickers = {}
+    def __init__(self, exchanges_by_id, initial_tickers):
+        # Will be defined on the first invocation of profit_summary().
+        self.start_balance_usdt_value = None
+        self.exchanges_by_id = exchanges_by_id
+        self.initial_tickers = initial_tickers
         self.profit_history = []
+        self.profit_summary(self.initial_tickers)
 
     def fetch_balances_by_currency(self, exchange_services) -> Dict[str, FinancialData]:
         # TODO - figure out how to make this class FinancialData instead of Decimal
@@ -63,8 +64,7 @@ class ProfitService:
                 balance: Balance = balances_for_exchange.get(currency_name)
                 balances[currency_name] += balance.total
 
-        self.balances = balances
-        return self.balances
+        return balances
 
     def exchange_balances_usdt_value(self, exchange_services, tickers_by_pair_name):
         balances: Dict[str, FinancialData] = self.fetch_balances_by_currency(exchange_services)
@@ -89,22 +89,28 @@ class ProfitService:
                     base_ticker_in_usd: Ticker = tickers.get(Pair.name_for_base_and_quote(quote=base, base=self.usdt_str))
                     return ticker.bid * base_ticker_in_usd.bid
 
-    def profit_summary(self, exchange_services: Dict[int, ExchangeServiceAbc], end_tickers: Dict[str, Ticker]):
+    def profit_summary(self, end_tickers: Dict[str, Ticker]):
         """
-        Profit summary for strategy vs. buy and hold BTC.
+        Profit summary for strategy vs. buy and hold BTC. This method is imprecise in that it doesn't calculate capital
+        gains that would be incurred by liquidating the portfolio. But it taxes capital gains that have been calculated
+        by the exchanges.
         :param exchange_services:
         :param end_tickers: Assumes that tickers are the same across all exchanges.
         :return:
         """
-        end_balance_usdt_value: FinancialData = self.exchange_balances_usdt_value(exchange_services, end_tickers)
+        end_balance_usdt_value: FinancialData = self.exchange_balances_usdt_value(self.exchanges_by_id, end_tickers)
+        if self.start_balance_usdt_value is None:
+            self.start_balance_usdt_value = end_balance_usdt_value
+
         gross_profits: FinancialData = end_balance_usdt_value - self.start_balance_usdt_value
-        taxes: FinancialData = max(gross_profits * (one - self.income_tax), zero)
+        capital_gains: FinancialData = reduce(lambda sum, x: sum + x.capital_gains, self.exchanges_by_id.values(), zero)
+        taxes: FinancialData = max(capital_gains * (one - self.income_tax), zero)
         net_profits: FinancialData = gross_profits - taxes
         strat_return: FinancialData = net_profits / self.start_balance_usdt_value * one_hundred
 
         btc_usdt_pair_name: str = Pair.name_for_base_and_quote(base='USDT', quote='BTC')
-        inital_btc_ticker: FinancialData = self.initial_tickers.get(btc_usdt_pair_name)
-        end_btc_ticker: FinancialData = end_tickers.get(btc_usdt_pair_name)
+        inital_btc_ticker: Ticker = self.initial_tickers.get(btc_usdt_pair_name)
+        end_btc_ticker: Ticker = end_tickers.get(btc_usdt_pair_name)
         bh_gross_profits: FinancialData = (end_btc_ticker.bid - inital_btc_ticker.bid) / inital_btc_ticker.bid * self.start_balance_usdt_value
         bh_taxes: FinancialData = max(bh_gross_profits * (one - self.ltcg_tax), zero)
         bh_net_profits: FinancialData = bh_gross_profits - bh_taxes
@@ -141,8 +147,7 @@ class ProfitService:
 
         """
 
-        snapshots_with_flattened_keys: List[Dict] = list(map(self.flatten_snapshot, self.profit_history))
-        df: pandas.DataFrame = pandas.DataFrame(snapshots_with_flattened_keys)
+        df: pandas.DataFrame = pandas.DataFrame(self.profit_history)
         df.to_csv(dest_path, index=False)
 
     @staticmethod

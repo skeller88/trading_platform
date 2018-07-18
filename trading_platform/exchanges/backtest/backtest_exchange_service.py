@@ -576,9 +576,11 @@ class BacktestExchangeService(ExchangeServiceAbc):
         Returns:
 
         """
-        if self.__balances[currency] >= amount:
+        if self.__balances[currency].free >= amount:
             # print(self.name + "\tWithdrawing\t%f quote" % amount)
-            self.__balances[currency] -= amount
+            self.__balances[currency].free -= amount
+            self.__balances[currency].total -= amount
+            self.__balances[currency].locked -= amount
             amount_withdrawn = amount - self.withdrawal_fee_for_currency(currency)
             dest_exchange.deposit(currency, amount_withdrawn, params.get('completion_timestamp'))
             return amount_withdrawn
@@ -587,7 +589,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
                 amount, self.__balances[currency]))
 
     def withdraw_all(self, currency, address, tag=None, params={}):
-        return self.withdraw(currency, self.__balances[currency], address, params=params)
+        return self.withdraw(currency, self.__balances[currency].free, address, params=params)
 
     @staticmethod
     def standardize_limit_order_response(order_response):
