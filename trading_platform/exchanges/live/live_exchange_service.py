@@ -40,6 +40,9 @@ class LiveExchangeService(ExchangeServiceAbc):
         self.__tickers = {}
         self.__withdrawal_fees = withdrawal_fees
 
+    def get_client(self):
+        return self.__client
+
     ###########################################
     # Trading - Orders
     ###########################################
@@ -305,6 +308,9 @@ class LiveExchangeService(ExchangeServiceAbc):
          """
         balance: Balance = self.__balances.get(currency)
         return balance if balance is not None else Balance.instance_with_zero_value_fields()
+
+    def get_balances(self) -> Dict[str, Balance]:
+        return self.__balances
 
     def fetch_balances(self) -> Dict[str, Balance]:
         self.__balances = {}

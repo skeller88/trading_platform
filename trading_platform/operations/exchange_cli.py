@@ -85,9 +85,12 @@ order: Order = Order(**{
 #                 print(market, exchange.exchange_name, dd.status, '\n')
 
 while True:
-    ticker = binance.fetch_latest_ticker(pair)
-    print(ticker.__dict__)
-    sleep(4)
+    markets = binance.get_client().load_markets(reload=True)
+    print('binance', len(markets))
+    markets = bittrex.get_client().load_markets(reload=True)
+    print('bittrex', len(markets))
+    sleep(1)
+
 # bittrex.fetch_balances()
 # print(bittrex.get_balance('BTC').free)
 # order_resp = bittrex.create_limit_sell_order(order)

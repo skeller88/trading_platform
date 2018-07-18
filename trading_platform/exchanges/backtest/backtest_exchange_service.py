@@ -123,9 +123,9 @@ class BacktestExchangeService(ExchangeServiceAbc):
             self.__balances[base].locked -= base_plus_fees
             self.__balances[base].total -= base_plus_fees
             # deal with small rounding errors
-            self.__balances[base].free = max(self.__balances[base], zero)
-            self.__balances[base].locked = max(self.__balances[base], zero)
-            self.__balances[base].total = max(self.__balances[base], zero)
+            self.__balances[base].free = max(self.__balances[base].free, zero)
+            self.__balances[base].locked = max(self.__balances[base].locked, zero)
+            self.__balances[base].total = max(self.__balances[base].total, zero)
 
             self.__balances[quote].free += amount
             self.__balances[quote].locked += amount
