@@ -43,8 +43,23 @@ class Dao:
             raise exception
 
     # Read
+    def fetch_by_column(self, session, column_name, column_value) -> List:
+        try:
+            dtos = session.query(self.dto_class).filter_by(**{column_name: column_value}).all()
+
+            if dtos is not None:
+                return list(map(lambda dto: dto.to_popo(), dtos))
+
+            return []
+        except Exception as exception:
+            print('rolling back due to exception')
+            traceback.print_exc()
+            session.rollback()
+            raise exception
+
     def fetch_by_db_id(self, session, db_id):
         try:
+            # db_id is unique, so there will be a maximum of one result per query
             dto = session.query(self.dto_class).filter_by(db_id=db_id).first()
 
             if dto is not None:

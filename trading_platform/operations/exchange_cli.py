@@ -86,9 +86,10 @@ order: Order = Order(**{
 
 while True:
     markets = binance.get_client().load_markets(reload=True)
-    print('binance', len(markets))
+    # list(map(print, markets))
     markets = bittrex.get_client().load_markets(reload=True)
-    print('bittrex', len(markets))
+
+    list(map(print, markets))
     sleep(1)
 
 # bittrex.fetch_balances()
