@@ -1,6 +1,6 @@
 from sqlalchemy import Integer, String, Column, Float, BigInteger
 
-from trading_platform.core.strategy.strategy_execution import StrategyExecution
+from trading_platform.strategy.strategy_execution import StrategyExecution
 from trading_platform.storage.sql_alchemy_dtos.base import Base
 from trading_platform.storage.types.json_encoded_dict import MutableJsonEncodedDict
 from trading_platform.utils.datetime_operations import utc_timestamp

@@ -101,6 +101,32 @@ class Dao:
             raise exception
 
     # Update
+    def update_fetch_by_column(self, session, column_name, column_value, update_dict={}, commit=False, flush=False):
+        """
+
+        Args:
+            session:
+            flush:
+            commit:
+            db_id:
+            update_dict:
+
+        Returns:
+
+        """
+        try:
+            session.query(self.dto_class).filter(getattr(self.dto_class, column_name) == column_value).update(update_dict)
+
+            if flush:
+                session.flush()
+            if commit:
+                session.commit()
+
+        except Exception as exception:
+            print('rolling back due to exception')
+            session.rollback()
+            raise exception
+
     def update(self, session, db_id, update_dict={}, commit=False, flush=False):
         """
 

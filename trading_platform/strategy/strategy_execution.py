@@ -73,7 +73,8 @@ class StrategyExecution:
 
         self.strategy_id = kwargs.get('strategy_id')
         strategy_execution_id = kwargs.get('strategy_execution_id')
-        self.strategy_execution_id: str = strategy_execution_id if strategy_execution_id is not None else self.strategy_id + '_' + str(self.app_create_timestamp)
+        self.strategy_execution_id: str = strategy_execution_id if strategy_execution_id is not None else self.generate_id(
+            self.strategy_id)
 
     # https://stackoverflow.com/questions/390250/elegant-ways-to-support-equivalence-equality-in-python-classes
     def __eq__(self, other):
@@ -89,20 +90,8 @@ class StrategyExecution:
         """Overrides the default implementation"""
         return hash(tuple(sorted(self.__dict__.items())))
 
-    def to_dict(self):
-        return {
-            'version': self.version,
-
-            'db_id': self.db_id,
-            'db_create_timestamp': self.db_create_timestamp,
-            'db_update_timestamp': self.db_update_timestamp,
-
-            'strategy_execution_id': self.strategy_execution_id,
-            'app_create_timestamp': self.app_create_timestamp,
-
-            'state': self.state,
-        }
-
-    @classmethod
-    def csv_fieldnames(cls):
-        return cls.required_fields + cls.nullable_fields
+    def generate_id(self, prefix=None) -> str:
+        if prefix is None:
+            return str(utc_timestamp())
+        else:
+            return '{0}_{1}'.format(prefix, utc_timestamp())

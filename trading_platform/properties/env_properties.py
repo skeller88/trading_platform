@@ -47,5 +47,12 @@ class EnvProperties:
     is_prod = env == 'prod'
 
 
+class OrderExecutionProperties:
+    # How many times to check the status of an order after placing it to see if status has changed
+    num_order_status_checks = os.environ.get('NUM_ORDER_STATUS_CHECKS', 20)
+    # How much time to sleep between order status checks
+    sleep_time_sec_between_order_checks = os.environ.get('SLEEP_TIME_SEC_BETWEEN_ORDER_CHECKS', 2)
+
+
 class S3:
     output_bucket = os.environ.get('OUTPUT_BUCKET')

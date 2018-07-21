@@ -1,4 +1,7 @@
-from trading_platform.data_engineering.fetch_s3_ticker_objects import fetch_s3_ticker_objects
+import os
+
+from trading_platform.core.services.file_service import FileService
+from trading_platform.data_engineering.ticker_etl_service import TickerEtlService
 
 v4_fieldnames = [
     'ask',
@@ -12,9 +15,10 @@ v4_fieldnames = [
     'version'
 ]
 
+relative_dir: str = 'trading_platform/trading_platform/data_engineering'
+input_dir: str = os.path.dirname(__file__).replace(relative_dir, 'trading_system_data/tickers')
+output_dir: str = os.path.dirname(__file__).replace(relative_dir, 'trading_system_data/tickers_by_exchange_and_pair')
 
-def s3_tickers_to_arbitrage_opportunities(start_timedelta_days, end_timedelta_days, ticker_version, ticker_fieldnames, multithreading):
-    fetch_s3_ticker_objects(start_timedelta_days, end_timedelta_days, ticker_version, ticker_fieldnames, multithreading)
-
-
-s3_tickers_to_arbitrage_opportunities(0, 4, '4', v4_fieldnames, multithreading=True)
+print(input_dir, output_dir)
+ticker_etl_service = TickerEtlService(FileService())
+ticker_etl_service.by_exchange_and_pair(input_dir, output_dir)

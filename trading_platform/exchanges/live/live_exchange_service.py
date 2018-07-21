@@ -43,6 +43,9 @@ class LiveExchangeService(ExchangeServiceAbc):
     def get_client(self):
         return self.__client
 
+    def get_trade_fee(self) -> FinancialData:
+        return self.trade_fee
+
     ###########################################
     # Trading - Orders
     ###########################################

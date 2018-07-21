@@ -1,6 +1,6 @@
 from nose.tools import eq_
 
-from trading_platform.core.strategy.strategy import Strategy
+from trading_platform.strategy.strategy import Strategy
 from trading_platform.core.test.util_methods import eq_ignore_certain_fields
 from trading_platform.storage.daos.strategy_dao import StrategyDao
 from trading_platform.storage.test.daos.test_dao import TestDao

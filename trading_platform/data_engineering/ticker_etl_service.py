@@ -7,11 +7,12 @@ import os
 import pandas
 
 from trading_platform.core.services.file_service import FileService
+from trading_platform.exchanges.data.enums import exchange_ids
 
 
 class TickerEtlService:
-    def __init__(self):
-        self.file_service = FileService
+    def __init__(self, file_service: FileService):
+        self.file_service = file_service
 
     def by_exchange_and_pair(self, input_dir, output_dir):
         self.file_service.create_dir_if_null(output_dir)
@@ -23,20 +24,36 @@ class TickerEtlService:
             return
 
         for ticker_file in ticker_files:
+            print(ticker_file)
             df = pandas.read_csv(ticker_file)
-            df.app_create_timestamp = pandas.to_datetime(df.app_create_timestamp.astype(int), unit='s')
-            group_columns = ['exchange_name', 'quote', 'base']
+
+            app_create_timestamp_col_name = 'app_create_timestamp' if 'app_create_timestamp' in df.columns else 'processing_time'
+            df['app_create_timestamp'] = pandas.to_datetime(df[app_create_timestamp_col_name].astype(int), unit='s')
+
+            # backwards compatibility. "exchange_name" is a column in Ticker data v2 and lower, and "exchange_id" is a
+            # column for Ticker data v3 and higher. See docs/ticker_schema_version_changelog.md for a detailed explanation
+            # of schema changes.
+            if 'exchange_name' in df.columns:
+                df['exchange_id'] = df['exchange_name'].apply(lambda x: exchange_ids.from_name(x))
+
+            version = df['version'].iloc[0]
+            group_columns = ['exchange_id', 'quote', 'base']
             g = df.groupby(group_columns).groups
-            for gr, data in g.items():
-                df_subset = df.iloc[data]
-                file_date = str(int(df_subset.app_create_timestamp.min().timestamp()))
-                pair_name = '{0}{1}'.format(gr[1], gr[2])
-                group_dir = os.path.join(output_dir, gr[0], pair_name)
-                self.file_service.create_dir_if_null(group_dir)
-                target_filepath = os.path.join(group_dir, '{0}_{1}_ticker_v2_{2}.csv'.format(
-                    gr[0], pair_name, file_date))
-                print(target_filepath)
-                df_subset.to_csv(target_filepath, index=False)
+            try:
+                for gr, data in g.items():
+                    exchange_id_str: str = str(gr[0])
+                    quote: str = gr[1]
+                    base: str = gr[2]
+                    df_subset = df.iloc[data]
+                    file_date = str(int(df_subset.app_create_timestamp.min().timestamp()))
+                    pair_name = '{0}{1}'.format(quote, base)
+                    group_dir = os.path.join(output_dir, exchange_id_str, pair_name)
+                    self.file_service.create_dir_if_null(group_dir)
+                    target_filepath = os.path.join(group_dir, '{0}_{1}_ticker_v{2}_{3}.csv'.format(
+                        exchange_id_str, pair_name, version, file_date))
+                    df_subset.to_csv(target_filepath, index=False, mode='w+')
+            except Exception:
+                print('foo')
 
     def group_by_freq(self, input_dir, output_dir, agg_func, freq='min'):
         """
@@ -67,10 +84,3 @@ class TickerEtlService:
             resdf = pandas.DataFrame(index=pt.index)
             resdf['app_create_timestamp'] = pt.index
             return resdf
-
-
-
-input_dir = os.getcwd().replace('core/data_engineering', 'data/arbitrage_finder/windows/ticker')
-output_dir = os.getcwd().replace('core/data_engineering', 'data/arbitrage_finder/derived/ticker')
-
-TickerEtlService.by_exchange_and_pair(input_dir, output_dir)

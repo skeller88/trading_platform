@@ -2,6 +2,7 @@
 
 ## Set up Python environment for bot
 
+First, make sure that the python3 version being used for this installation is >= 3.6 and <3.7.
 due to pip not working, install pip after creating venv: https://askubuntu.com/questions/488529/pyvenv-3-4-error-returned-non-zero-exit-status-1
 ```
 cd <trading_system_platform_dir>
