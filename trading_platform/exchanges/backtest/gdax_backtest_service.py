@@ -2,7 +2,7 @@ import pandas
 
 from trading_platform.exchanges.backtest.backtest_exchange_service import BacktestExchangeService
 from trading_platform.exchanges.data.enums import exchange_names, exchange_ids
-from trading_platform.exchanges.live.gdax_live_service import GdaxLiveService
+from trading_platform.exchanges.data.financial_data import FinancialData
 
 
 class GdaxBacktestService:
@@ -14,7 +14,7 @@ class GdaxBacktestService:
     exchange_id = exchange_ids.gdax
 
     def __init__(self):
-        self.__backtest_service = BacktestExchangeService(exchange_id=self.exchange_id, trade_fee=GdaxLiveService.trade_fee,
+        self.__backtest_service = BacktestExchangeService(exchange_id=self.exchange_id, trade_fee=FinancialData(0.0025),
                                                   withdrawal_fees=pandas.DataFrame(), echo=False)
 
     def __getattr__(self, name):
