@@ -1,3 +1,5 @@
+import pandas
+
 from typing import Dict, Optional, List
 
 import ccxt
@@ -38,7 +40,7 @@ class LiveExchangeService(ExchangeServiceAbc):
         self.__balances = {}
         self.__orders = {}
         self.__tickers = {}
-        self.__withdrawal_fees = withdrawal_fees
+        self.__withdrawal_fees = withdrawal_fees if withdrawal_fees is not None else pandas.DataFrame()
 
     def get_client(self):
         return self.__client
