@@ -17,8 +17,7 @@ class TestWithdrawalFeesService(unittest.TestCase):
     def test_get_by_exchange_ids(self):
         fees_by_exchange_ids: Dict[int, pandas.DataFrame] = WithdrawalFeesService.get_by_exchange_ids()
         for exchange_id in exchange_ids.all_ids:
-            if exchange_id in [exchange_ids.binance, exchange_ids.bittrex, exchange_ids.poloniex, exchange_ids.kraken,
-                               exchange_ids.kucoin, exchange_ids.coinbase]:
+            if exchange_id not in [exchange_ids.bitflyer, exchange_ids.gemini]:
                 assert (fees_by_exchange_ids[exchange_id].at['ETH', 'withdrawal_fee'] is not None)
             else:
                 assert_false('ETH' in fees_by_exchange_ids[exchange_id].index)

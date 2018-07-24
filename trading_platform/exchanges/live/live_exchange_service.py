@@ -243,7 +243,8 @@ class LiveExchangeService(ExchangeServiceAbc):
         if currency.upper() in self.__withdrawal_fees.index:
             return FinancialData(self.__withdrawal_fees.at[currency.upper(), 'withdrawal_fee'])
         else:
-            print('ERROR - withdrawal fee not found for currency {0} and exchange {1}'.format(currency.upper(),
+            if currency.upper() != 'USD':
+                print('ERROR - withdrawal fee not found for currency {0} and exchange {1}'.format(currency.upper(),
                                                                                               self.exchange_name))
             return zero
 

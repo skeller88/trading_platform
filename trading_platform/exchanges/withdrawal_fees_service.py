@@ -1,16 +1,13 @@
 import csv
-import glob
 import os
-
 import pandas
 import re
 import requests
+import shutil
 from bs4 import BeautifulSoup
-from pandas.errors import ParserError
 from typing import Dict, Match
 from typing.re import Pattern
 
-from trading_platform.exchanges import withdrawal_fees_dfs
 from trading_platform.exchanges.data import standardizers
 from trading_platform.exchanges.data.enums import exchange_ids
 from trading_platform.exchanges.data.financial_data import FinancialData
@@ -124,6 +121,10 @@ class WithdrawalFeesService:
                 cls.for_exchange_from_exchangebit(exchange_id=exchange_id, withdrawal_fees_dir=cls.withdrawal_fees_dir)
             else:
                 cls.for_exchange_from_anythingcrypto(exchange_id=exchange_id, withdrawal_fees_dir=cls.withdrawal_fees_dir)
+
+        # Gdax is now called coinbase pro, but ccxt uses the name Gdax.
+        shutil.copy(os.path.join(cls.withdrawal_fees_dir, '{0}_withdrawal_fees.csv'.format(exchange_ids.coinbase)),
+                    os.path.join(cls.withdrawal_fees_dir, '{0}_withdrawal_fees.csv'.format(exchange_ids.gdax)))
 
     @staticmethod
     def get_by_exchange_ids() -> Dict[int, pandas.DataFrame]:
