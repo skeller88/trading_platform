@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="tradingplatform",
     # increment version according to https://semver.org/
-    version="1.10.0",
+    version="1.10.1",
     author="skeller88",
     author_email="skeller88@gmail.com",
     description="A trading system platform",

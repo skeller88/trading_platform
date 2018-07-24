@@ -20,8 +20,8 @@ class WithdrawalFeesService:
     """
     Fetches withdrawal fees via web scraping.
     """
-    anythingcrypto_url = 'https://exchangebit.info'
-    exchangebit_url = 'https://anythingcrypto.com/exchange-withdrawal-fees'
+    exchangebit_url= 'https://exchangebit.info'
+    anythingcrypto_url = 'https://anythingcrypto.com/exchange-withdrawal-fees'
     currency_regex: Pattern = re.compile('\((.+)\)')
     withdrawal_fee_regex: Pattern = re.compile('([0-9]+\.[0-9]+)')
 
@@ -54,7 +54,7 @@ class WithdrawalFeesService:
             os.makedirs(withdrawal_fees_dir)
 
         # "wf" short for "withdrawal fee"
-        wf_response = requests.get(url='{0}/{1}'.format(cls.exchangebit_url, exchange_name.lower()))
+        wf_response = requests.get(url='{0}/{1}'.format(cls.anythingcrypto_url, exchange_name.lower()))
         wf_html = BeautifulSoup(wf_response.text, 'html.parser')
 
         filename = '{0}_withdrawal_fees.csv'.format(exchange_id)
@@ -108,8 +108,8 @@ class WithdrawalFeesService:
         with open(os.path.join(withdrawal_fees_dir, filename), 'w+') as dest_file:
             writer = csv.DictWriter(dest_file, fieldnames=['currency', 'withdrawal_fee'])
             writer.writeheader()
-
-            for tr in wf_html.find_all('tr'):
+            tbody = wf_html.find('tbody')
+            for tr in tbody.find_all('tr'):
                 anchor = tr.a
                 if anchor is not None:
                     writer.writerow({
@@ -120,7 +120,10 @@ class WithdrawalFeesService:
     @classmethod
     def update_withdrawal_fees_files(cls):
         for exchange_id in exchange_ids.all_ids:
-            cls.for_exchange_from_anythingcrypto(exchange_id=exchange_id, withdrawal_fees_dir=cls.withdrawal_fees_dir)
+            if exchange_id in [exchange_ids.binance, exchange_ids.bittrex]:
+                cls.for_exchange_from_exchangebit(exchange_id=exchange_id, withdrawal_fees_dir=cls.withdrawal_fees_dir)
+            else:
+                cls.for_exchange_from_anythingcrypto(exchange_id=exchange_id, withdrawal_fees_dir=cls.withdrawal_fees_dir)
 
     @staticmethod
     def get_by_exchange_ids() -> Dict[int, pandas.DataFrame]:
