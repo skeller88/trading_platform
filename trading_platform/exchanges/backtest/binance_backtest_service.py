@@ -13,7 +13,7 @@ class BinanceBacktestService:
     exchange_id = exchange_ids.binance
 
     def __init__(self):
-        withdrawal_fees = WithdrawalFeesService.by_exchange_ids()[self.exchange_id]
+        withdrawal_fees = WithdrawalFeesService.get_by_exchange_ids()[self.exchange_id]
         self.__backtest_service = BacktestExchangeService(exchange_id=self.exchange_id, trade_fee=FinancialData(.0010),
                                                   withdrawal_fees=withdrawal_fees, echo=False)
 

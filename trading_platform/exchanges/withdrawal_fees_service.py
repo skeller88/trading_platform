@@ -3,9 +3,12 @@ import glob
 import os
 
 import pandas
+import re
 import requests
 from bs4 import BeautifulSoup
 from pandas.errors import ParserError
+from typing import Dict, Match
+from typing.re import Pattern
 
 from trading_platform.exchanges import withdrawal_fees_dfs
 from trading_platform.exchanges.data import standardizers
@@ -15,12 +18,76 @@ from trading_platform.exchanges.data.financial_data import FinancialData
 
 class WithdrawalFeesService:
     """
-    This class only gets withdrawal fees for Binance and Bittrex.
+    Fetches withdrawal fees via web scraping.
     """
-    exchangebit_url = 'https://exchangebit.info'
+    anythingcrypto_url = 'https://exchangebit.info'
+    exchangebit_url = 'https://anythingcrypto.com/exchange-withdrawal-fees'
+    currency_regex: Pattern = re.compile('\((.+)\)')
+    withdrawal_fee_regex: Pattern = re.compile('([0-9]+\.[0-9]+)')
+
+    withdrawal_fees_dir = os.path.dirname(__file__).replace('exchanges', 'withdrawal_fees')
 
     @classmethod
-    def for_exchange_from_exchangebit(cls, exchange_id, csv_dir):
+    def for_exchange_from_anythingcrypto(cls, exchange_id, withdrawal_fees_dir):
+        """
+        Supports the following exchanges:
+        - Binance
+        - Bittrex
+        - Coinbase
+        - Kraken
+        - Kucoin
+        - Poloniex
+
+        Not supported:
+        - Bitflyer
+        - Gdax
+        - Gemini
+        Args:
+            exchange_id:
+            withdrawal_fees_dir:
+
+        Returns:
+
+        """
+        exchange_name = exchange_ids.to_name(exchange_id)
+        if not os.path.exists(withdrawal_fees_dir):
+            os.makedirs(withdrawal_fees_dir)
+
+        # "wf" short for "withdrawal fee"
+        wf_response = requests.get(url='{0}/{1}'.format(cls.exchangebit_url, exchange_name.lower()))
+        wf_html = BeautifulSoup(wf_response.text, 'html.parser')
+
+        filename = '{0}_withdrawal_fees.csv'.format(exchange_id)
+        with open(os.path.join(withdrawal_fees_dir, filename), 'w+') as dest_file:
+            writer = csv.DictWriter(dest_file, fieldnames=['currency', 'withdrawal_fee'])
+            writer.writeheader()
+
+            rows_to_skip = 3
+            skipped = 0
+
+            for tr in wf_html.find_all('tr'):
+                if skipped < rows_to_skip:
+                    skipped += 1
+                    continue
+
+                groups: Match = cls.currency_regex.search(tr.contents[0].text)
+                if groups is None:
+                    continue
+
+                currency = standardizers.currency(groups.group(1))
+                groups: Match = cls.withdrawal_fee_regex.search(tr.contents[1].span.text)
+                if groups is None:
+                    continue
+
+                withdrawal_fee = FinancialData(groups.group(0))
+
+                writer.writerow({
+                    'currency': currency,
+                    'withdrawal_fee': withdrawal_fee
+                })
+
+    @classmethod
+    def for_exchange_from_exchangebit(cls, exchange_id, withdrawal_fees_dir):
         """
         Fetches withdrawal fees from a website, parses them, and writes to a csv.
         Args:
@@ -30,23 +97,21 @@ class WithdrawalFeesService:
 
         """
         exchange_name = exchange_ids.to_name(exchange_id)
-        if not os.path.exists(csv_dir):
-            os.makedirs(csv_dir)
+        if not os.path.exists(withdrawal_fees_dir):
+            os.makedirs(withdrawal_fees_dir)
 
         # "wf" short for "withdrawal fee"
         wf_response = requests.get(url='{0}/{1}'.format(cls.exchangebit_url, exchange_name.lower()))
         wf_html = BeautifulSoup(wf_response.text, 'html.parser')
 
-        filename = '{0}_withdrawal_fees.csv'.format(exchange_name.lower())
-        with open(os.path.join(csv_dir, filename), 'w') as dest_file:
+        filename = '{0}_withdrawal_fees.csv'.format(exchange_id)
+        with open(os.path.join(withdrawal_fees_dir, filename), 'w+') as dest_file:
             writer = csv.DictWriter(dest_file, fieldnames=['currency', 'withdrawal_fee'])
             writer.writeheader()
 
             for tr in wf_html.find_all('tr'):
                 anchor = tr.a
                 if anchor is not None:
-                    currency = anchor.text
-
                     writer.writerow({
                         'currency': standardizers.currency(anchor.text),
                         'withdrawal_fee': FinancialData(tr.contents[7].text)
@@ -54,51 +119,21 @@ class WithdrawalFeesService:
 
     @classmethod
     def update_withdrawal_fees_files(cls):
-        # csv_dir is both the output and input location of .csv files containing withdrawal fees
-        csv_dir = os.getcwd().replace('core.services', 'data/withdrawal_fees')
-        # Currently exchangebit only supports binance and bittrex
-        for exchange_id in [exchange_ids.binance, exchange_ids.bittrex]:
-            cls.for_exchange_from_exchangebit(exchange_id, csv_dir)
+        for exchange_id in exchange_ids.all_ids:
+            cls.for_exchange_from_anythingcrypto(exchange_id=exchange_id, withdrawal_fees_dir=cls.withdrawal_fees_dir)
 
     @staticmethod
-    def for_exchange_from_csv(exchange_id, source_dir):
-        """
-
-        Args:
-            exchange_id:
-            source_dir:
-
-        Returns pandas.DataFrame: withdrawal fees from csv file
-
-        """
-        exchange_name = exchange_ids.to_name(exchange_id)
-        files = glob.glob(os.path.join(source_dir, exchange_name.lower() + '*'))
-        if len(files) != 1:
-            raise Exception('Expected 1 withdrawal fees file, found {0}'.format(len(files)))
-        try:
-            return pandas.read_csv(files[0], index_col='currency', engine='python')
-        except ParserError:
-            print('c engine')
-            try:
-                return pandas.read_csv(files[0], index_col='currency', engine='c')
-            except ParserError:
-                return pandas.read_csv(files[0], index_col='currency', compression='zip')
-
-
-    @staticmethod
-    def by_exchange_ids():
+    def get_by_exchange_ids() -> Dict[int, pandas.DataFrame]:
         """
         Get withdrawal fees by exchange id.
-
-        Args:
-
-        Returns dict(id, pandas.DataFrame):
-
         """
-        return {
-            exchange_ids.binance: withdrawal_fees_dfs.binance_withdrawal_fees_df,
-            exchange_ids.bittrex: withdrawal_fees_dfs.bittrex_withdrawal_fees_df
-        }
+        withdrawal_fees_dir = os.path.dirname(__file__).replace('exchanges', 'withdrawal_fees')
 
-# Uncomment the line below in order to update the withdrawal fee files
-# WithdrawalFeesService.update_withdrawal_fees_files()
+        def withdrawal_df_for_exchange(exchange_id: int):
+            filepath = os.path.join(withdrawal_fees_dir, '{0}_withdrawal_fees.csv'.format(exchange_id))
+            if os.path.exists(filepath):
+                return pandas.read_csv(filepath, index_col='currency')
+
+            return pandas.DataFrame()
+
+        return {exchange_id: withdrawal_df_for_exchange(exchange_id) for exchange_id in exchange_ids.all_ids}

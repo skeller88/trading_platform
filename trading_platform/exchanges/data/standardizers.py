@@ -29,7 +29,13 @@ def currency(currency):
     Returns:
 
     """
-    if currency == 'BCH':
+    if currency in ['BCH', 'BCH/BCC']:
         return 'BCC'
+
+    if currency == 'NANO/XRB':
+        return 'NANO'
+
+    if currency == 'RVR/VOX':
+        return 'RVR'
 
     return currency
