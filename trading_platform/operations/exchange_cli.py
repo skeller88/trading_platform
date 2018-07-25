@@ -22,6 +22,7 @@ exchange_services_by_id = live_subclasses.instantiate(live_subclasses.all_live()
 binance = exchange_services_by_id.get(exchange_ids.binance)
 bittrex = exchange_services_by_id.get(exchange_ids.bittrex)
 kucoin = exchange_services_by_id.get(exchange_ids.kucoin)
+poloniex = exchange_services_by_id.get(exchange_ids.poloniex)
 
 
 def cancel_orders(pair):
@@ -84,13 +85,8 @@ order: Order = Order(**{
 #             if dd is not None and dd.status != 'ok':
 #                 print(market, exchange.exchange_name, dd.status, '\n')
 
-while True:
-    markets = binance.get_client().load_markets(reload=True)
-    # list(map(print, markets))
-    markets = bittrex.get_client().load_markets(reload=True)
-
-    list(map(print, markets))
-    sleep(1)
+dd = poloniex.fetch_deposit_destination('ETH')
+print(dd.__dict__)
 
 # bittrex.fetch_balances()
 # print(bittrex.get_balance('BTC').free)

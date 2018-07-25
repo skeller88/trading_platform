@@ -22,6 +22,7 @@ from functools import reduce
 from heapq import heappush, heappop
 from typing import Dict, Optional, List
 
+from trading_platform.exchanges.data import standardizers
 from trading_platform.exchanges.data.balance import Balance
 from trading_platform.exchanges.data.deposit_destination import DepositDestination
 from trading_platform.exchanges.data.enums import exchange_ids
@@ -443,12 +444,15 @@ class BacktestExchangeService(ExchangeServiceAbc):
         return base_amount / (currency_price * (one + self.trade_fee)) - self.withdrawal_fee_for_currency(currency)
 
     def withdrawal_fee_for_currency(self, currency):
-        # hack for now
-        if currency == 'BCH':
-            currency = 'BCC'
-
+        currency = standardizers.currency(currency)
         # values in dataframe are in float type, which is not compatible with the FinancialData type (Decimal)
-        return FinancialData(self.__withdrawal_fees.at[currency.upper(), 'withdrawal_fee'])
+        if currency.upper() in self.__withdrawal_fees.index:
+            return FinancialData(self.__withdrawal_fees.at[currency.upper(), 'withdrawal_fee'])
+        else:
+            if currency.upper() != 'USD':
+                print('ERROR - withdrawal fee not found for currency {0} and exchange {1}'.format(currency.upper(),
+                                                                                              self.exchange_name))
+            return zero
 
     def below_min_base_order_value(self, currency_amount, currency_price):
         # TODO - compute for different bases
