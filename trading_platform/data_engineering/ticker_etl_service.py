@@ -1,10 +1,13 @@
 """
 Split ticker files containing tickers for all pairs and all exchanges into separate ticker files by pair and exchange.
 """
-import glob
-import os
+import time
 
+import glob
+import ntpath
+import os
 import pandas
+import random
 from typing import List, Callable, Optional
 
 from trading_platform.core.services.file_service import FileService
@@ -18,20 +21,31 @@ class TickerEtlService:
     def __init__(self, file_service: FileService):
         self.file_service = file_service
 
-    def run_pipeline(self, input_dir, output_dir, pipeline: List[Callable[[str], Optional[pandas.DataFrame]]]):
+    def run_pipeline(self, input_dir, output_dir, pipeline: List[Callable[[pandas.DataFrame], Optional[pandas.DataFrame]]]):
         self.file_service.create_dir_if_null(output_dir)
         glob_path: str = os.path.join(input_dir, '**', '*ticker*.csv')
 
-        ticker_files: List[str] = glob.glob(glob_path, recursive=True)
-        for ticker_file in ticker_files:
+        ticker_filenames: List[str] = glob.glob(glob_path, recursive=True)
+        files_processed: int = 0
+        start_time = time.time()
+        for ticker_filename in ticker_filenames:
+            files_processed += 1
+            if random.randint(0, 1000) == 0:
+                print('{0} files processed in {1} seconds'.format(files_processed, (time.time() - start_time)))
+
+            ticker_df = TickerEtlService.read_csv(ticker_filename, False)
+
             for method in pipeline:
-                ticker_file = method(ticker_file)
+                if ticker_df is None:
+                    break
+                ticker_df = method(ticker_df)
 
-            ticker_file.to_csv(os.path.join(output_dir), 'w+')
+            if ticker_df is not None:
+                basename:str = ntpath.basename(ticker_filename)
+                ticker_df.to_csv(os.path.join(output_dir, basename), sep=',', mode='w+')
 
-    def standardize(self, ticker_file: str) -> Optional[pandas.DataFrame]:
-        ticker_df: pandas.DataFrame = pandas.read_csv(ticker_file)
-
+    @staticmethod
+    def standardize(ticker_df: pandas.DataFrame) -> Optional[pandas.DataFrame]:
         # Ignore this version of files because they don't include the bid and ask fields.
         if any(ticker_df['version'] == 0):
             return
@@ -39,11 +53,15 @@ class TickerEtlService:
         # backwards compatibility. "exchange_name" is a column in Ticker data v2 and lower, and "exchange_id" is a
         # column for Ticker data v3 and higher. See docs/ticker_schema_version_changelog.md for a detailed explanation
         # of schema changes.
-        if 'exchange_name' in ticker_df.columns:
-            ticker_df['exchange_id'] = ticker_df['exchange_name'].apply(lambda x: exchange_ids.from_name(x))
+        if ticker_df.version.iloc[0] < 3:
+            colname = 'exchange_id' if ticker_df.version.iloc[0] == 2 else 'exchange_name'
+            ticker_df['exchange_id'] = ticker_df[colname].apply(lambda x: exchange_ids.from_name(x))
 
-        ticker_df['app_create_timestamp'] = ticker_df[
-            'app_create_timestamp'] if 'app_create_timestamp' in ticker_df.columns else ticker_df['processing_time']
+            if ticker_df.version.iloc[0] < 2:
+                ticker_df.drop('exchange_name', axis=1)
+
+        if 'processing_time' in ticker_df.columns:
+            ticker_df.rename(columns={'processing_time': 'app_create_timestamp'}, inplace=True)
 
         ticker_df['standard_version'] = 0
 
@@ -90,24 +108,35 @@ class TickerEtlService:
             except Exception:
                 print('foo')
 
-    def group_by_freq(self, input_dir, output_dir, windows_per_file: 60, freq='min'):
+    def aggregate(self, input_dir, output_dir, windows_per_file=3300):
         """
-        Group ticker files by frequency and write to csv.
+        Aggregate ticker files and write to csv.
+
+        Each ticker file is about 150KB. 0.5 GB is a safe amount of memory per file.
+        0.5 GB * 1000MB/GB * 1000KB/MB * 1/150KB = 3333 files.
         """
         self.file_service.create_dir_if_null(output_dir)
         glob_path = os.path.join(input_dir, '**', '*ticker*.csv')
-        ticker_files = glob.glob(glob_path, recursive=True)
+        ticker_filenames: List[str] = glob.glob(glob_path, recursive=True)
+        ticker_filenames.sort()
 
         windows_added: int = 0
+        ticker_dfs: List[pandas.DataFrame] = []
 
-        for ticker_file in ticker_files:
-            ticker_dfs: List[pandas.DataFrame] = []
-            while windows_added < windows_per_file:
-                ticker_df = pandas.read_csv(ticker_file)
-                ticker_dfs.append(ticker_df)
+        for ticker_filename in ticker_filenames:
+            if windows_added < windows_per_file:
+                ticker_df = FileService.read_csv(ticker_filename, True)
+                if ticker_df is not None:
+                    ticker_dfs.append(ticker_df)
                 windows_added += 1
-            ticker_agg_df: pandas.DataFrame = pandas.concat(ticker_dfs)
-            ticker_agg_df.groupby(pandas.Grouper(key='app_create_timestamp', freq=freq))
-            earliest_window: str = '0'
+            else:
+                if len(ticker_dfs) > 0:
+                    agg_ticker_df: pandas.DataFrame = pandas.concat(ticker_dfs)
+                    agg_ticker_df.sort_values(by='app_create_timestamp', inplace=True)
+                    earliest_window: str = str(agg_ticker_df.iloc[0]['app_create_timestamp'])
+                    filename: str = 'ticker_agg_{0}'.format(earliest_window)
+                    print('aggregated tickers in file {0}'.format(filename))
+                    agg_ticker_df.to_csv(os.path.join(output_dir, filename))
 
-            ticker_agg_df.to_csv(os.path.join(output_dir, 'ticker_agg_{0}'.format(earliest_window)))
+                windows_added = 0
+                ticker_dfs = []

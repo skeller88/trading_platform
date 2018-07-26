@@ -1,11 +1,11 @@
 import itertools
 import time
-from typing import List, Dict
 
 import pandas
+from typing import List, Dict
 
 from trading_platform.aws_utils.s3_operations import write_tickers
-from trading_platform.exchanges.data.enums import exchange_ids
+from trading_platform.exchanges.backtest.backtest_exchange_service import BacktestExchangeService
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
@@ -76,13 +76,9 @@ class TickerService:
         return filepath, tickers_list
 
     @staticmethod
-    def set_latest_tickers_from_file(ticker_filename, exchange_services: Dict[int, ExchangeServiceAbc]):
-        ticker_df: pandas.DataFrame = pandas.read_csv(ticker_filename)
-
-        ticker_df_grouped: pandas.DataFrame = ticker_df.groupby([
-            pandas.Grouper(key='exchange_id'),
-            pandas.Grouper(key='app_create_timestamp', freq='min'),
-        ])
-
+    def set_latest_tickers_from_file(exchange_services: Dict[int, BacktestExchangeService], ticker_df: pandas.DataFrame):
         for exchange_id, exchange in exchange_services.items():
-            latest_tickers_df = ticker_df_grouped.index[]
+            tickers_for_exchange = ticker_df[ticker_df.exchange_id == exchange_id]
+            tickers: Dict[str, Ticker] = {'{0}_{1}'.format(row['quote'], row['base']): Ticker(**row) for row in
+                                          tickers_for_exchange.to_dict(orient='records').values()}
+            exchange.set_tickers(tickers)

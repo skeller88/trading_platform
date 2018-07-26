@@ -9,7 +9,8 @@ import datetime
 import re
 
 import os
-from typing import Generator
+from pandas.errors import EmptyDataError
+from typing import Generator, Optional
 
 import pandas as pd
 from setuptools import glob
@@ -24,7 +25,6 @@ class FileService:
     def create_dirs_if_null(dir_names):
         [FileService.create_dir_if_null(dir_name) for dir_name in dir_names]
 
-
     @staticmethod
     def create_dir_if_null(dir_name):
         if not os.path.exists(dir_name):
@@ -38,6 +38,20 @@ class FileService:
             return
         df = pd.concat(dfs)
         return df
+
+    @staticmethod
+    def read_csv(filename, parse_dates: bool) -> Optional[pd.DataFrame]:
+        try:
+            if parse_dates:
+                def second_parser(arg):
+                    return pd.to_datetime(arg=arg, unit='s')
+
+                return pd.read_csv(filename, date_parser=second_parser, parse_dates=['app_create_timestamp'])
+            else:
+                return pd.read_csv(filename)
+        # Happens if .csv file is empty
+        except EmptyDataError:
+            return
 
     @staticmethod
     def csv_filenames_for_exchange_names_and_pair_name(exchange_names, pair_name, source_dir):
