@@ -244,7 +244,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
         else:
             # print('Could not sell', insufficient_funds)
             raise InsufficientFundsException('{0} quote needed to sell, only {1} quote available'.format(
-                amount, self.__balances[quote]))
+                amount, self.__balances[quote].free))
 
     def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}) -> Dict[str, Order]:
         return {order.order_id: order for order in self.orders if
@@ -590,7 +590,7 @@ class BacktestExchangeService(ExchangeServiceAbc):
             return amount_withdrawn
         else:
             raise InsufficientFundsException('{0} needed to withdraw, only {1} available'.format(
-                amount, self.__balances[currency]))
+                amount, self.__balances[currency].free))
 
     def withdraw_all(self, currency, address, tag=None, params={}):
         return self.withdraw(currency, self.__balances[currency].free, address, params=params)

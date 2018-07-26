@@ -76,9 +76,9 @@ class TickerService:
         return filepath, tickers_list
 
     @staticmethod
-    def set_latest_tickers_from_file(exchange_services: Dict[int, BacktestExchangeService], ticker_df: pandas.DataFrame):
+    def set_latest_tickers(exchange_services: Dict[int, BacktestExchangeService], ticker_df: pandas.DataFrame):
         for exchange_id, exchange in exchange_services.items():
             tickers_for_exchange = ticker_df[ticker_df.exchange_id == exchange_id]
             tickers: Dict[str, Ticker] = {'{0}_{1}'.format(row['quote'], row['base']): Ticker(**row) for row in
-                                          tickers_for_exchange.to_dict(orient='records').values()}
+                                          tickers_for_exchange.to_dict(orient='records')}
             exchange.set_tickers(tickers)
