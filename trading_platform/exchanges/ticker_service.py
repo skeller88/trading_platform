@@ -6,6 +6,7 @@ from typing import List, Dict
 
 from trading_platform.aws_utils.s3_operations import write_tickers
 from trading_platform.exchanges.backtest.backtest_exchange_service import BacktestExchangeService
+from trading_platform.exchanges.data.financial_data import FinancialData
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
@@ -82,3 +83,14 @@ class TickerService:
             tickers: Dict[str, Ticker] = {'{0}_{1}'.format(row['quote'], row['base']): Ticker(**row) for row in
                                           tickers_for_exchange.to_dict(orient='records')}
             exchange.set_tickers(tickers)
+
+    @staticmethod
+    def tickers_with_converted_numerical_fields(tickers: Dict[str, Ticker]) -> Dict[str, Ticker]:
+        def ticker_with_converted_numerical_fields(ticker: Ticker) -> Ticker:
+            for field in Ticker.numerical_fields:
+                setattr(ticker, field, FinancialData(getattr(ticker, field)))
+            return ticker
+
+        return {
+            pair_name: ticker_with_converted_numerical_fields(ticker) for pair_name, ticker in tickers.items()
+        }

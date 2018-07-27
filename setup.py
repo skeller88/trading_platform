@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="tradingplatform",
     # increment version according to https://semver.org/
-    version="1.11.0",
+    version="1.12.0",
     author="skeller88",
     author_email="skeller88@gmail.com",
     description="A trading system platform",
@@ -15,6 +15,7 @@ setuptools.setup(
         'beautifulsoup4',
         'boto3>=1.7,<1.7.99',
         'ccxt>=1.15,<1.15.99',
+        'matplotlib>=2.0, <= 2.0.99',
         'nose>=1.3,<1.3.99',
         'numpy>=1.14,<1.14.99',
         # Latest version supported by zipline: https://github.com/quantopian/zipline/pull/2194

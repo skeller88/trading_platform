@@ -34,6 +34,8 @@ class LiveExchangeService(ExchangeServiceAbc):
             withdrawal_fees pandas.DataFrame:
         """
         super().__init__(key=key, secret=secret, trade_fee=trade_fee)
+        self.key = key
+        self.secret = secret
         self.exchange_id = exchange_id
         self.exchange_name = exchange_name
         self.__client = client

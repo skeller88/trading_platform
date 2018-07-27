@@ -13,6 +13,7 @@ from trading_platform.exchanges.data.financial_data import FinancialData, zero, 
 from trading_platform.exchanges.data.pair import Pair
 from trading_platform.exchanges.data.ticker import Ticker
 from trading_platform.exchanges.ticker_service import TickerService
+from trading_platform.utils.datetime_operations import datetime_now_with_utc_offset
 
 
 class TestBacktestProfitService(unittest.TestCase):
@@ -62,7 +63,7 @@ class TestBacktestProfitService(unittest.TestCase):
 
     def test_profit_summary_end_balance_equals_start_balance(self):
         profit_service = ProfitService(initial_tickers=self.initial_tickers, exchanges_by_id=self.exchanges_by_id)
-        profit_summary = profit_service.profit_summary(self.initial_tickers)
+        profit_summary = profit_service.profit_summary(datetime_now_with_utc_offset(), self.initial_tickers)
         eq_(profit_summary.get('gross_profits'), zero)
         eq_(profit_summary.get('bh_taxes'), profit_summary.get('taxes'))
 
@@ -87,7 +88,7 @@ class TestBacktestProfitService(unittest.TestCase):
         end_quote_ticker.bid = end_quote_ticker.bid * FinancialData(1.5)
         self.end_tickers[self.quote_pair.name] = end_quote_ticker
 
-        profit_summary = ps.profit_summary(self.end_tickers)
+        profit_summary = ps.profit_summary(datetime_now_with_utc_offset(), self.end_tickers)
         for field in ps.profit_summary_fields:
             assert(profit_summary.get(field) is not None)
 
@@ -113,7 +114,7 @@ class TestBacktestProfitService(unittest.TestCase):
         """
         ps = ProfitService(initial_tickers=self.initial_tickers, exchanges_by_id=self.exchanges_by_id)
         self.exchanges_by_id[exchange_ids.binance].deposit_immediately(self.quote_pair.quote, FinancialData(50))
-        profit_summary = ps.profit_summary(self.end_tickers)
+        profit_summary = ps.profit_summary(datetime_now_with_utc_offset(), self.end_tickers)
         for field in ps.profit_summary_fields:
             assert(profit_summary.get(field) is not None)
 

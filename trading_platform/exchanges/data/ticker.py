@@ -34,6 +34,12 @@ class Ticker:
     first_version_with_volume_fields = 5
     current_version = 5
 
+    # Don't include last because "last" isn't included in the aggregated csv files right now.
+    numerical_fields = [
+        'ask',
+        'bid',
+    ]
+
     required_fields = [
         'ask',
         'bid',

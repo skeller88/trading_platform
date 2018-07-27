@@ -41,6 +41,9 @@ insufficient_funds = "Insufficient Funds"
 
 
 class BacktestExchangeService(ExchangeServiceAbc):
+    possible_bases: List[str] = ['USDT', 'BTC', 'ETH']
+    usdt_str: str = 'USDT'
+
     def __init__(self, exchange_id, trade_fee, withdrawal_fees, echo):
         """
         Args:
@@ -159,6 +162,19 @@ class BacktestExchangeService(ExchangeServiceAbc):
             raise InsufficientFundsException('{0} base needed to buy {1} of quote, only {2} base available'.format(
                 base_plus_fees, amount, self.__balances[base].free))
 
+    def usdt_value_for_currency(self, currency, tickers):
+        if currency == self.usdt_str:
+            return one
+
+        for base in self.possible_bases:
+            ticker: Ticker = tickers.get(Pair.name_for_base_and_quote(quote=currency, base=base))
+            if ticker:
+                if base == self.usdt_str:
+                    return ticker.bid
+                else:
+                    base_ticker_in_usd: Ticker = tickers.get(Pair.name_for_base_and_quote(quote=base, base=self.usdt_str))
+                    return ticker.bid * base_ticker_in_usd.bid
+
     def create_limit_sell_order(self, order, params=None):
         """
         Specify how much quote you want to sell, and the trading fee is subtracted from the quote sold. Different from
@@ -210,9 +226,10 @@ class BacktestExchangeService(ExchangeServiceAbc):
             self.__balances[quote].locked -= amount
             self.__balances[quote].total -= amount
 
-            pair_name: str = Pair.name_for_base_and_quote(base=base, quote=quote)
-            gross = (price - self.__buy_prices[pair_name]) * FinancialData(amount)
-            gross_usdt = self.usdt_tickers[base] * gross
+            pair: Pair = Pair(base=base, quote=quote)
+            gross = (price - self.__buy_prices[pair.name]) * FinancialData(amount)
+            usdt_value = self.usdt_value_for_currency(pair.base, self.get_tickers())
+            gross_usdt = usdt_value * gross
 
             if gross_usdt >= 0:
                 self.capital_gains += gross_usdt

@@ -5,6 +5,7 @@ Unlike BacktestProfitService, does not need to maintain the state of exchange ba
 the database does that. Also unlike BacktestProfitService, this service is not currently tracking capital gains taxes.
 Ideally, it would, but as an initial effort, the service will subtract the strategy tax premium from profits.
 """
+import datetime
 from collections import defaultdict
 from decimal import Decimal
 from functools import reduce
@@ -45,15 +46,16 @@ class ProfitService:
 
         'net_profits',
         'bh_net_profits',
-   ]
+    ]
 
-    def __init__(self, exchanges_by_id, initial_tickers):
+    def __init__(self, exchanges_by_id: Dict[int, ExchangeServiceAbc], initial_datetime: datetime.datetime,
+                 initial_tickers: Dict[str, Ticker]):
         # Will be defined on the first invocation of profit_summary().
         self.start_balance_usdt_value = None
         self.exchanges_by_id = exchanges_by_id
         self.initial_tickers = initial_tickers
         self.profit_history = []
-        self.profit_summary(self.initial_tickers)
+        self.profit_summary(initial_datetime, self.initial_tickers)
 
     def fetch_balances_by_currency(self, exchange_services) -> Dict[str, FinancialData]:
         # TODO - figure out how to make this class FinancialData instead of Decimal
@@ -70,7 +72,6 @@ class ProfitService:
         balances: Dict[str, FinancialData] = self.fetch_balances_by_currency(exchange_services)
 
         usdt_value: FinancialData = zero
-
         for currency_name, balance in balances.items():
             usdt_value += balance * self.usdt_value_for_currency(currency_name, tickers_by_pair_name)
 
@@ -86,10 +87,11 @@ class ProfitService:
                 if base == self.usdt_str:
                     return ticker.bid
                 else:
-                    base_ticker_in_usd: Ticker = tickers.get(Pair.name_for_base_and_quote(quote=base, base=self.usdt_str))
+                    base_ticker_in_usd: Ticker = tickers.get(
+                        Pair.name_for_base_and_quote(quote=base, base=self.usdt_str))
                     return ticker.bid * base_ticker_in_usd.bid
 
-    def profit_summary(self, end_tickers: Dict[str, Ticker]):
+    def profit_summary(self, summary_datetime: datetime.datetime, end_tickers: Dict[str, Ticker]):
         """
         Profit summary for strategy vs. buy and hold BTC. This method is imprecise in that it doesn't calculate capital
         gains that would be incurred by liquidating the portfolio. But it taxes capital gains that have been calculated
@@ -106,19 +108,21 @@ class ProfitService:
         capital_gains: FinancialData = reduce(lambda sum, x: sum + x.capital_gains, self.exchanges_by_id.values(), zero)
         taxes: FinancialData = max(capital_gains * (one - self.income_tax), zero)
         net_profits: FinancialData = gross_profits - taxes
-        strat_return: FinancialData = net_profits / self.start_balance_usdt_value * one_hundred
+        strat_return: FinancialData = net_profits / self.start_balance_usdt_value
 
         btc_usdt_pair_name: str = Pair.name_for_base_and_quote(base='USDT', quote='BTC')
         inital_btc_ticker: Ticker = self.initial_tickers.get(btc_usdt_pair_name)
         end_btc_ticker: Ticker = end_tickers.get(btc_usdt_pair_name)
-        bh_gross_profits: FinancialData = (end_btc_ticker.bid - inital_btc_ticker.bid) / inital_btc_ticker.bid * self.start_balance_usdt_value
+        bh_gross_profits: FinancialData = (
+                                                      end_btc_ticker.bid - inital_btc_ticker.bid) / inital_btc_ticker.bid * self.start_balance_usdt_value
         bh_taxes: FinancialData = max(bh_gross_profits * (one - self.ltcg_tax), zero)
         bh_net_profits: FinancialData = bh_gross_profits - bh_taxes
-        bh_return: FinancialData = bh_net_profits / self.start_balance_usdt_value * one_hundred
+        bh_return: FinancialData = bh_net_profits / self.start_balance_usdt_value
 
         alpha: FinancialData = strat_return - bh_return
         net_profits_over_bh: FinancialData = net_profits - bh_net_profits
         profit_summary: Dict = {
+            'summary_datetime': summary_datetime,
             'alpha': alpha,
             'net_profits_over_bh': net_profits_over_bh,
 
