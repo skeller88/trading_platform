@@ -18,6 +18,17 @@ class Pair:
         self.kaiko_name = '{0}{1}'.format(quote, base)
         self.quote = quote
 
+    def __hash__(self):
+        """Overrides the default implementation"""
+        return hash(tuple(sorted(self.__dict__.items())))
+
+    def __eq__(self, other):
+        """Overrides the default implementation"""
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+
     @classmethod
     def from_exchange_client_string(cls, pair_string) -> Optional['Pair']:
         """

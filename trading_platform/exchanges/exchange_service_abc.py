@@ -24,6 +24,15 @@ class ExchangeServiceAbc(ABC):
         self.secret = secret
         self.trade_fee = Decimal(trade_fee)
 
+    def get_client(self) -> Optional[object]:
+        """
+        Return exchange client. Unused for Backtest implementation.
+
+        Returns:
+
+        """
+        pass
+
     ###########################################
     # Trading - Orders
     ###########################################

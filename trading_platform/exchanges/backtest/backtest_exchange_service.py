@@ -94,6 +94,9 @@ class BacktestExchangeService(ExchangeServiceAbc):
 
         self.echo = echo
 
+    def get_client(self) -> Optional[object]:
+        return
+
     ###########################################
     # Trading - Orders
     ###########################################
