@@ -1,15 +1,12 @@
-import random
+from time import sleep
+
 import unittest
 from copy import copy
 from logging import Logger
-from time import sleep
+from nose.tools import eq_, nottest
+from sqlalchemy.orm import Session
 from typing import Dict, Set, List
 from unittest.mock import MagicMock
-
-from nose.tools import eq_, assert_greater, nottest
-from sqlalchemy.orm import Session
-
-from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
 
 from trading_platform.core.services.logging_service import LoggingService
 from trading_platform.core.test.util_methods import eq_ignore_certain_fields
@@ -335,7 +332,7 @@ class TestOrderExecutionService(unittest.TestCase):
             order_returned_by_exchange.exchange_order_id = self.bittrex.new_exchange_order_id()
             self.bittrex.fetch_order = MagicMock(return_value=order_returned_by_exchange)
 
-        order_snapshot: Order = self.order_execution_service.execute_order(order, self.session,
+        order_snapshot: Order = self.order_execution_service.execute_order(self.bittrex, order, self.session,
                                                                            write_pending_order=write_pending_order,
                                                                            check_if_order_filled=check_if_order_filled)
         # compare order with order returned from exchange

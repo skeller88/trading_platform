@@ -1,7 +1,7 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import Logger
 from time import sleep
-from typing import Dict, Set, Iterable
+from typing import Dict, Set, Iterable, Tuple, List
 
 from sqlalchemy.orm import Session, scoped_session
 
@@ -26,22 +26,42 @@ class OrderExecutionService:
         if self.multithreaded:
             self.thread_pool_executer: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=10)
 
+    def execute_order_with_session(self, order, write_pending_order: bool, check_if_order_filled: bool) -> Order:
+        exchange: ExchangeServiceAbc = self.exchanges_by_id.get(order.exchange_id)
+        return self.execute_order(exchange, order, self.scoped_session_maker(), write_pending_order,
+                                  check_if_order_filled=check_if_order_filled)
+
     def execute_order_set(self, orders: Set[Order], write_pending_order: bool,
                           check_if_orders_filled: bool) -> Dict[str, Order]:
         def execute_order_with_session(order) -> Order:
-            return self.execute_order(order, self.scoped_session_maker(), write_pending_order,
-                                      check_if_order_filled=check_if_orders_filled)
+            return self.execute_order_with_session(order, write_pending_order,
+                                                   check_if_order_filled=check_if_orders_filled)
 
         order_execution_attempts: Iterable[Order] = map(execute_order_with_session, orders)
         executed_orders: Iterable[Order] = filter(lambda order: order is not None, order_execution_attempts)
         order_dict = {order.order_id: order for order in executed_orders}
         return order_dict
 
-    def execute_order(self, order: Order, session: Session, write_pending_order: bool,
+    def execute_parallel_orders(self, orders_by_client: Dict[str, Tuple[ExchangeServiceAbc, Order]],
+                                write_pending_order: bool, check_if_order_filled: bool) -> List[Order]:
+        futures = [
+            self.thread_pool_executer.submit(self.execute_order, client_order_tuple[0], client_order_tuple[1],
+                                             self.scoped_session_maker(), write_pending_order, check_if_order_filled)
+            for client_name, client_order_tuple in orders_by_client.items()
+        ]
+        executed_orders = []
+
+        for future in as_completed(futures):
+            executed_orders.append(future.result())
+
+        return executed_orders
+
+    def execute_order(self, exchange: ExchangeServiceAbc, order: Order, session: Session, write_pending_order: bool,
                       check_if_order_filled: bool) -> Order:
         """
 
         Args:
+            exchange:
             order:
             session:
             write_pending_order:
@@ -55,7 +75,6 @@ class OrderExecutionService:
             order.exchange_id,
             order.order_side))
 
-        exchange = self.exchanges_by_id.get(order.exchange_id)
         exchange_method = exchange.create_limit_buy_order if order.order_side == OrderSide.buy else exchange.create_limit_sell_order
 
         try:
@@ -64,21 +83,24 @@ class OrderExecutionService:
                 self.order_dao.save(popo=order, session=session, commit=True)
 
             params = order.params if order.params is not None else {}
-            order_snapshot: Order = exchange_method(order, params=params)
+            executed_order: Order = exchange_method(order, params=params)
 
-            self.save_order(order_snapshot, session)
+            self.save_order(executed_order, session)
 
             if check_if_order_filled:
-                return self.poll_exchange_for_order_status(OrderStatus.filled, session, order_snapshot)
+                return self.poll_exchange_for_order_status(exchange, OrderStatus.filled, session, executed_order)
 
-            return order_snapshot
+            return executed_order
         except Exception as ex:
             self.logger.error(ex)
             raise ex
 
-    def poll_exchange_for_order_status(self, order_status: OrderStatus.filled, session: Session, order: Order) -> Order:
+    def poll_exchange_for_order_status(self, exchange: ExchangeServiceAbc, order_status: OrderStatus.filled,
+                                       session: Session,
+                                       order: Order) -> Order:
         """
         Args:
+            exchange:
             session:
             order_status:
             order:
@@ -88,11 +110,12 @@ class OrderExecutionService:
 
         """
         order_snapshot: Order = order
-        exchange: ExchangeServiceAbc = self.exchanges_by_id.get(order.exchange_id)
         for attempt in range(self.num_order_status_checks):
             order_snapshot: Order = exchange.fetch_order(order.exchange_order_id,
                                                          pair=Pair(base=order.base, quote=order.quote), params=None)
             if order_snapshot is not None and order_snapshot.order_status == order_status:
+                self.logger.info(
+                    'order_id {0} has order_status {1}'.format(order_snapshot.order_id, order_snapshot.order_status))
                 self.save_order(order_snapshot, session)
                 return order_snapshot
 
@@ -146,7 +169,7 @@ class OrderExecutionService:
         }, session=session, commit=True)
         sleep(self.sleep_for_exchange_consistency_sec)
         self.logger.info('replacing sell order')
-        self.execute_order(order, session, False, False)
+        self.execute_order(None, order, session, False, False)
 
     def cancel_order(self, order: Order):
         pass
