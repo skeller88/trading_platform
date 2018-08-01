@@ -49,12 +49,7 @@ class OrderExecutionService:
                                              self.scoped_session_maker(), write_pending_order, check_if_order_filled)
             for client_name, client_order_tuple in orders_by_client.items()
         ]
-        executed_orders = []
-
-        for future in as_completed(futures):
-            executed_orders.append(future.result())
-
-        return executed_orders
+        return futures
 
     def execute_order(self, exchange: ExchangeServiceAbc, order: Order, session: Session, write_pending_order: bool,
                       check_if_order_filled: bool) -> Order:
