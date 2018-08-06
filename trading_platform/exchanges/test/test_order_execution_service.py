@@ -1,11 +1,12 @@
 from time import sleep
 
 import unittest
+from concurrent.futures import as_completed, Future
 from copy import copy
 from logging import Logger
 from nose.tools import eq_, nottest
 from sqlalchemy.orm import Session
-from typing import Dict, Set, List
+from typing import Dict, Set, List, Tuple
 from unittest.mock import MagicMock
 
 from trading_platform.core.services.logging_service import LoggingService
@@ -18,6 +19,7 @@ from trading_platform.exchanges.data.enums.order_status import OrderStatus
 from trading_platform.exchanges.data.enums.order_type import OrderType
 from trading_platform.exchanges.data.financial_data import FinancialData, two
 from trading_platform.exchanges.data.order import Order
+from trading_platform.exchanges.exchange_service_abc import ExchangeServiceAbc
 from trading_platform.exchanges.order_execution_service import OrderExecutionService
 from trading_platform.storage.daos.order_dao import OrderDao
 from trading_platform.storage.sql_alchemy_engine import SqlAlchemyEngine
@@ -63,6 +65,7 @@ class TestOrderExecutionService(unittest.TestCase):
     def setUp(self):
         self.backtest_services: Dict[id, BacktestExchangeService] = backtest_subclasses.instantiate()
         self.bittrex = self.backtest_services[exchange_ids.bittrex]
+        self.binance = self.backtest_services[exchange_ids.binance]
 
         self.session: Session = self.scoped_session_maker()
         self.order_execution_service: OrderExecutionService = OrderExecutionService(**{
@@ -245,6 +248,37 @@ class TestOrderExecutionService(unittest.TestCase):
 
     def test_execute_orders_not_multithreaded(self):
         self.test_execute_orders(False)
+
+    def test_execute_parallel_orders(self):
+        self.order_execution_service: OrderExecutionService = OrderExecutionService(
+            scoped_session_maker=self.scoped_session_maker,
+            logger=self.logger, order_dao=self.order_dao, exchanges_by_id=self.backtest_services,
+            multithreaded=True)
+
+        orders_by_client: Dict[str, Tuple[ExchangeServiceAbc, Order]] = {}
+        for exchange in [self.bittrex, self.binance]:
+            # multiple by two to make sure there's enough base
+            exchange.deposit_immediately(self.base, self.quote_amount * self.quote_price * two)
+            exchange.deposit_immediately(self.quote, self.quote_amount)
+            exchange.set_buy_price('{0}_{1}'.format(self.quote, self.base), self.quote_price)
+            exchange.set_usdt_tickers({
+                'USDT': FinancialData(1)
+            })
+
+            buy_order_kwargs: Dict = copy(self.base_order_kwargs)
+            buy_order_kwargs['order_side'] = OrderSide.buy
+            buy_order_kwargs['exchange_id'] = exchange.exchange_id
+            buy_order = Order(**buy_order_kwargs)
+
+            orders_by_client[exchange.exchange_name] = [exchange, buy_order]
+
+        order_futures: List[Future] = self.order_execution_service.execute_parallel_orders(orders_by_client, write_pending_order=True,
+                                                                             check_if_order_filled=False)
+        for order_future in as_completed(order_futures):
+            order: Order = order_future.result()
+            eq_(order.order_side, OrderSide.buy)
+            eq_(order.order_status, OrderStatus.open)
+            assert(order.exchange_id in [self.binance.exchange_id, self.bittrex.exchange_id])
 
     @nottest
     def test_execute_orders(self, multithreaded):

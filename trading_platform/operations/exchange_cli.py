@@ -75,6 +75,10 @@ order: Order = Order(**{
     'price': FinancialData(.06),
 })
 
+for pair in [Pair(base='BTC', quote='XLM'), Pair(base='BTC', quote='BCPT'), Pair(base='BTC', quote='STEEM')]:
+    print(pair.name)
+    oh = binance.get_client().fetch_ohlcv(pair.name_for_exchange_clients, timeframe='5m')
+    print(oh[0][5])
 # with open('/Users/shanekeller/Documents/trading_platform/trading_platform/exchanges/data/cryptocurrencies.json', 'r') as f:
 #     crypto_json: str = json.load(f)
 #
@@ -85,8 +89,8 @@ order: Order = Order(**{
 #             if dd is not None and dd.status != 'ok':
 #                 print(market, exchange.exchange_name, dd.status, '\n')
 
-dd = poloniex.fetch_deposit_destination('ETH')
-print(dd.__dict__)
+# dd = poloniex.fetch_deposit_destination('ETH')
+# print(dd.__dict__)
 
 # bittrex.fetch_balances()
 # print(bittrex.get_balance('BTC').free)

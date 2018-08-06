@@ -1,9 +1,30 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from logging import Logger
-from time import sleep
-from typing import Dict, Set, Iterable, Tuple, List
+"""
+_identity_cls <class 'sqlalchemy.orm.identity.WeakInstanceDict'>
+identity_map <sqlalchemy.orm.identity.WeakInstanceDict object at 0x10dfddb00>
+_new {<sqlalchemy.orm.state.InstanceState object at 0x10dfdd0b8>: <SqlAlchemyOrderDto(db_id='None', order_id='1_ETH_USDT_0_2_000000_5_000000', order_status='0')>, <sqlalchemy.orm.state.InstanceState object at 0x10dfd6f28>: <SqlAlchemyOrderDto(db_id='None', order_id='0_ETH_USDT_0_2_000000_5_000000', order_status='0')>}
+_deleted {}
+bind Engine(postgres+pg8000://limiteduser:***@localhost:5432/market_data)
+_Session__binds {}
+_flushing True
+_warn_on_events True
+transaction <sqlalchemy.orm.session.SessionTransaction object at 0x10dfdd860>
+hash_key 1
+autoflush False
+autocommit False
+expire_on_commit True
+enable_baked_queries True
+_enable_transaction_accounting True
+twophase False
+_query_cls <class 'sqlalchemy.orm.query.Query'>
+dispatch <sqlalchemy.event.base.SessionEventsDispatch object at 0x10df04258>
 
+"""
+from time import sleep
+
+from concurrent.futures import ThreadPoolExecutor, Future
+from logging import Logger
 from sqlalchemy.orm import Session, scoped_session
+from typing import Dict, Set, Iterable, Tuple, List, Optional
 
 from trading_platform.exchanges.data.enums.order_side import OrderSide
 from trading_platform.exchanges.data.enums.order_status import OrderStatus
@@ -43,22 +64,24 @@ class OrderExecutionService:
         return order_dict
 
     def execute_parallel_orders(self, orders_by_client: Dict[str, Tuple[ExchangeServiceAbc, Order]],
-                                write_pending_order: bool, check_if_order_filled: bool) -> List[Order]:
+                                write_pending_order: bool, check_if_order_filled: bool) -> List[Future]:
         futures = [
-            self.thread_pool_executer.submit(self.execute_order, client_order_tuple[0], client_order_tuple[1],
-                                             self.scoped_session_maker(), write_pending_order, check_if_order_filled)
+            self.thread_pool_executer.submit(self.execute_order, client_order_tuple[0], client_order_tuple[1], None,
+                                             write_pending_order, check_if_order_filled)
             for client_name, client_order_tuple in orders_by_client.items()
         ]
         return futures
 
-    def execute_order(self, exchange: ExchangeServiceAbc, order: Order, session: Session, write_pending_order: bool,
+    def execute_order(self, exchange: ExchangeServiceAbc, order: Order, session: Optional[Session],
+                      write_pending_order: bool,
                       check_if_order_filled: bool) -> Order:
         """
 
         Args:
             exchange:
             order:
-            session:
+            session: Optional[Session]. None if multithreaded, because self.scoped_session_maker must create the session
+                from within the thread.
             write_pending_order:
             check_if_order_filled:
 
@@ -72,6 +95,8 @@ class OrderExecutionService:
 
         exchange_method = exchange.create_limit_buy_order if order.order_side == OrderSide.buy else exchange.create_limit_sell_order
 
+        if session is None:
+            session = self.scoped_session_maker
         try:
             if write_pending_order:
                 order.order_status = OrderStatus.pending
@@ -80,7 +105,7 @@ class OrderExecutionService:
             params = order.params if order.params is not None else {}
             executed_order: Order = exchange_method(order, params=params)
 
-            self.save_order(executed_order, session)
+            self.order_dao.save(popo=order, session=session, commit=True)
 
             if check_if_order_filled:
                 return self.poll_exchange_for_order_status(exchange, OrderStatus.filled, session, executed_order)
@@ -111,18 +136,12 @@ class OrderExecutionService:
             if order_snapshot is not None and order_snapshot.order_status == order_status:
                 self.logger.info(
                     'order_id {0} has order_status {1}'.format(order_snapshot.order_id, order_snapshot.order_status))
-                self.save_order(order_snapshot, session)
+                self.order_dao.save(popo=order, session=session, commit=True)
                 return order_snapshot
 
             sleep(self.sleep_time_sec_between_order_checks)
 
         return order_snapshot
-
-    def save_order(self, order: Order, session: Session):
-        if self.multithreaded:
-            self.thread_pool_executer.submit(self.order_dao.save, popo=order, session=session, commit=True)
-        else:
-            self.order_dao.save(popo=order, session=session, commit=True)
 
     def update_order(self, order: Order, session: Session):
         """
